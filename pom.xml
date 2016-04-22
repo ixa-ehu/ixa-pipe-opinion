@@ -2,11 +2,11 @@
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>eus.ixa</groupId>
-	<artifactId>ixa-pipe-nerc</artifactId>
+	<artifactId>ixa-pipe-opinion</artifactId>
 	<packaging>jar</packaging>
-	<version>2.0.0</version>
-	<name>ixa-pipe-nerc</name>
-	<description>IXA pipes Named Entity Tagger (ixa2.si.ehu.es/ixa-pipes).</description>
+	<version>1.0.0</version>
+	<name>ixa-pipe-opinion</name>
+	<description>IXA pipes Opinion Tagger (ixa2.si.ehu.es/ixa-pipes).</description>
 	<licenses>
 		<license>
 			<name>Apache License, Version 2.0</name>
@@ -129,7 +129,7 @@
 				<artifactId>exec-maven-plugin</artifactId>
 				<version>1.2.1</version>
 				<configuration>
-					<mainClass>eus.ixa.ixa.pipe.nerc.CLI</mainClass>
+					<mainClass>eus.ixa.ixa.pipe.opinion.CLI</mainClass>
 				</configuration>
 			</plugin>
 			<plugin>
@@ -189,7 +189,7 @@
 								<transformer
 									implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
 									<manifestEntries>
-										<Main-Class>eus.ixa.ixa.pipe.nerc.CLI</Main-Class>
+										<Main-Class>eus.ixa.ixa.pipe.opinion.CLI</Main-Class>
 										<groupId>${project.groupId}</groupId>
 										<artifactId>${project.artifactId}</artifactId>
 										<Implementation-Version>${project.version}</Implementation-Version>
@@ -211,8 +211,8 @@
 		<name>IXA pipes</name>
 	</organization>
 	<scm>
-		<url>https://github.com/ixa-ehu/ixa-pipe-nerc</url>
-		<connection>scm:git:git@github.com:ixa-ehu/ixa-pipe-nerc.git</connection>
-		<developerConnection>scm:git:git@github.com:ixa-ehu/ixa-pipe-nerc.git</developerConnection>
+		<url>https://github.com/ixa-ehu/ixa-pipe-opinion</url>
+		<connection>scm:git:git@github.com:ixa-ehu/ixa-pipe-opinion.git</connection>
+		<developerConnection>scm:git:git@github.com:ixa-ehu/ixa-pipe-opinion.git</developerConnection>
 	</scm>
 </project>
