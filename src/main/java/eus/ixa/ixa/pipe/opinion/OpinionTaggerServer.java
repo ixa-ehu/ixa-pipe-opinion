@@ -14,7 +14,7 @@
     limitations under the License.
  */
 
-package eus.ixa.ixa.pipe.nerc;
+package eus.ixa.ixa.pipe.opinion;
 
 import ixa.kaflib.KAFDocument;
 
@@ -32,7 +32,7 @@ import org.jdom2.JDOMException;
 
 import com.google.common.io.Files;
 
-public class TargetExtractorServer {
+public class OpinionTaggerServer {
 
   /**
    * Get dynamically the version of ixa-pipe-nerc by looking at the MANIFEST
@@ -60,7 +60,7 @@ public class TargetExtractorServer {
    * @param properties
    *          the properties
    */
-  public TargetExtractorServer(Properties properties) {
+  public OpinionTaggerServer(Properties properties) {
 
     Integer port = Integer.parseInt(properties.getProperty("port"));
     model = properties.getProperty("model");
@@ -68,7 +68,7 @@ public class TargetExtractorServer {
     ServerSocket socketServer = null;
 
     try {
-      OpinionTargetExtractor annotator = new OpinionTargetExtractor(properties);
+      Annotate annotator = new Annotate(properties);
       System.out.println("-> Trying to listen port... " + port);
       socketServer = new ServerSocket(port);
 
@@ -147,7 +147,7 @@ public class TargetExtractorServer {
    * @throws JDOMException
    *           if xml error
    */
-  private String getAnnotations(OpinionTargetExtractor annotator, String stringFromClient)
+  private String getAnnotations(Annotate annotator, String stringFromClient)
       throws IOException, JDOMException {
     // get a breader from the string coming from the client
     BufferedReader clientReader = new BufferedReader(new StringReader(

@@ -14,7 +14,7 @@
    limitations under the License.
  */
 
-package eus.ixa.ixa.pipe.nerc;
+package eus.ixa.ixa.pipe.opinion;
 
 import ixa.kaflib.KAFDocument;
 import ixa.kaflib.Opinion;
@@ -26,9 +26,12 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
 
-import opennlp.tools.namefind.NameFinderME;
-import opennlp.tools.namefind.NameSample;
-import opennlp.tools.util.Span;
+import eus.ixa.ixa.pipe.ml.StatisticalSequenceLabeler;
+import eus.ixa.ixa.pipe.ml.sequence.Sequence;
+import eus.ixa.ixa.pipe.ml.sequence.SequenceFactory;
+import eus.ixa.ixa.pipe.ml.sequence.SequenceLabelerME;
+import eus.ixa.ixa.pipe.ml.sequence.SequenceSample;
+import eus.ixa.ixa.pipe.ml.utils.Span;
 
 /**
  * Annotation class for Opinion Target Extraction (OTE).
@@ -37,27 +40,27 @@ import opennlp.tools.util.Span;
  * @version 2015-04-29
  * 
  */
-public class OpinionTargetExtractor {
+public class Annotate {
 
   /**
    * The factory to construct Name objects.
    */
-  private NameFactory nameFactory;
+  private SequenceFactory nameFactory;
   /**
    * The NameFinder to do the opinion target extraction.
    */
-  private StatisticalNameFinder oteExtractor;
+  private StatisticalSequenceLabeler oteExtractor;
   /**
    * Clear features after every sentence or when a -DOCSTART- mark appears.
    */
   private String clearFeatures;
 
   
-  public OpinionTargetExtractor(final Properties properties) throws IOException {
+  public Annotate(final Properties properties) throws IOException {
 
     this.clearFeatures = properties.getProperty("clearFeatures");
-    nameFactory = new NameFactory();
-    oteExtractor = new StatisticalNameFinder(properties, nameFactory);
+    nameFactory = new SequenceFactory();
+    oteExtractor = new StatisticalSequenceLabeler(properties, nameFactory);
   }
   
   /**
@@ -79,8 +82,8 @@ public class OpinionTargetExtractor {
       if (clearFeatures.equalsIgnoreCase("docstart") && tokens[0].startsWith("-DOCSTART-")) {
         oteExtractor.clearAdaptiveData();
       }
-      List<Name> names = oteExtractor.getNames(tokens);
-      for (Name name : names) {
+      List<Sequence> names = oteExtractor.getSequences(tokens);
+      for (Sequence name : names) {
         Integer startIndex = name.getSpan().getStart();
         Integer endIndex = name.getSpan().getEnd();
         List<Term> nameTerms = kaf.getTermsFromWFs(Arrays.asList(Arrays
@@ -127,13 +130,13 @@ public class OpinionTargetExtractor {
       if (clearFeatures.equalsIgnoreCase("docstart") && tokens[0].startsWith("-DOCSTART-")) {
         oteExtractor.clearAdaptiveData();
       }
-      Span[] statSpans = oteExtractor.nercToSpans(tokens);
+      Span[] statSpans = oteExtractor.seqToSpans(tokens);
       boolean isClearAdaptiveData = false;
       if (clearFeatures.equalsIgnoreCase("yes")) {
         isClearAdaptiveData = true;
       }
-      Span[] allSpansArray = NameFinderME.dropOverlappingSpans(statSpans);
-      NameSample nameSample = new NameSample(tokens, allSpansArray, isClearAdaptiveData);
+      Span[] allSpansArray = SequenceLabelerME.dropOverlappingSpans(statSpans);
+      SequenceSample nameSample = new SequenceSample(tokens, allSpansArray, isClearAdaptiveData);
       sb.append(nameSample.toString()).append("\n");
     }
     oteExtractor.clearAdaptiveData();

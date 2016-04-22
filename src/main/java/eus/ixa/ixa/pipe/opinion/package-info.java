@@ -8,4 +8,4 @@
  * All these three methods correspond to the implementations of
  * the {@code NameFinder} interface
  */
-package eus.ixa.ixa.pipe.nerc;
+package eus.ixa.ixa.pipe.opinion;
