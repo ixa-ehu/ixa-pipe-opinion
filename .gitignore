@@ -1,12 +1,16 @@
-*.class
-
-# Mobile Tools for Java (J2ME)
-.mtj.tmp/
-
-# Package Files #
+target
+*.bin
+*.patch
+*.pyc
+*.log
+*.so
+*.so.old
+*.swp
+octave-core
 *.jar
-*.war
-*.ear
-
-# virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
-hs_err_pid*
+*.class
+*.classpath
+*.project
+*.pydevproject
+*.settings
+*.checkstyle
