@@ -27,10 +27,10 @@ import java.util.List;
 import java.util.Properties;
 
 import eus.ixa.ixa.pipe.ml.StatisticalSequenceLabeler;
-import eus.ixa.ixa.pipe.ml.sequence.Sequence;
-import eus.ixa.ixa.pipe.ml.sequence.SequenceFactory;
+import eus.ixa.ixa.pipe.ml.sequence.SequenceLabel;
+import eus.ixa.ixa.pipe.ml.sequence.SequenceLabelFactory;
 import eus.ixa.ixa.pipe.ml.sequence.SequenceLabelerME;
-import eus.ixa.ixa.pipe.ml.sequence.SequenceSample;
+import eus.ixa.ixa.pipe.ml.sequence.SequenceLabelSample;
 import eus.ixa.ixa.pipe.ml.utils.Span;
 
 /**
@@ -45,7 +45,7 @@ public class Annotate {
   /**
    * The factory to construct Name objects.
    */
-  private SequenceFactory nameFactory;
+  private SequenceLabelFactory nameFactory;
   /**
    * The NameFinder to do the opinion target extraction.
    */
@@ -59,7 +59,7 @@ public class Annotate {
   public Annotate(final Properties properties) throws IOException {
 
     this.clearFeatures = properties.getProperty("clearFeatures");
-    nameFactory = new SequenceFactory();
+    nameFactory = new SequenceLabelFactory();
     oteExtractor = new StatisticalSequenceLabeler(properties, nameFactory);
   }
   
@@ -82,8 +82,8 @@ public class Annotate {
       if (clearFeatures.equalsIgnoreCase("docstart") && tokens[0].startsWith("-DOCSTART-")) {
         oteExtractor.clearAdaptiveData();
       }
-      List<Sequence> names = oteExtractor.getSequences(tokens);
-      for (Sequence name : names) {
+      List<SequenceLabel> names = oteExtractor.getSequences(tokens);
+      for (SequenceLabel name : names) {
         Integer startIndex = name.getSpan().getStart();
         Integer endIndex = name.getSpan().getEnd();
         List<Term> nameTerms = kaf.getTermsFromWFs(Arrays.asList(Arrays
@@ -136,7 +136,7 @@ public class Annotate {
         isClearAdaptiveData = true;
       }
       Span[] allSpansArray = SequenceLabelerME.dropOverlappingSpans(statSpans);
-      SequenceSample nameSample = new SequenceSample(tokens, allSpansArray, isClearAdaptiveData);
+      SequenceLabelSample nameSample = new SequenceLabelSample(tokens, allSpansArray, isClearAdaptiveData);
       sb.append(nameSample.toString()).append("\n");
     }
     oteExtractor.clearAdaptiveData();
