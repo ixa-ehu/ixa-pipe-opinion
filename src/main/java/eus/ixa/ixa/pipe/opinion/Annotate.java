@@ -20,6 +20,7 @@ import ixa.kaflib.KAFDocument;
 import ixa.kaflib.Opinion;
 import ixa.kaflib.Term;
 import ixa.kaflib.WF;
+import ixa.kaflib.Opinion.OpinionExpression;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -88,9 +89,12 @@ public class Annotate {
         Integer endIndex = name.getSpan().getEnd();
         List<Term> nameTerms = kaf.getTermsFromWFs(Arrays.asList(Arrays
             .copyOfRange(tokenIds, startIndex, endIndex)));
-        ixa.kaflib.Span<Term> neSpan = KAFDocument.newTermSpan(nameTerms);
+        ixa.kaflib.Span<Term> oteSpan = KAFDocument.newTermSpan(nameTerms);
         Opinion opinion = kaf.newOpinion();
-        opinion.createOpinionTarget(neSpan);
+        opinion.createOpinionTarget(oteSpan);
+        //TODO expression span, perhaps heuristic around ote?
+        OpinionExpression opExpression = opinion.createOpinionExpression(oteSpan);
+        opExpression.setSentimentProductFeature(name.getType());
       }
       if (clearFeatures.equalsIgnoreCase("yes")) {
         oteExtractor.clearAdaptiveData();

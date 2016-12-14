@@ -45,8 +45,8 @@ import eus.ixa.ixa.pipe.ml.utils.Flags;
 
 
 /**
- * Main class of ixa-pipe-nerc, the ixa pipes (ixa2.si.ehu.es/ixa-pipes) sequence
- * labeler.
+ * Main class of ixa-pipe-opinion, the ixa pipes (ixa2.si.ehu.es/ixa-pipes) opinion
+ * tagger.
  * 
  * @author ragerri
  * @version 2015-02-26
@@ -55,13 +55,12 @@ import eus.ixa.ixa.pipe.ml.utils.Flags;
 public class CLI {
 
   /**
-   * Get dynamically the version of ixa-pipe-nerc by looking at the MANIFEST
+   * Get dynamically the version of ixa-pipe-opinion by looking at the MANIFEST
    * file.
    */
-  private final String version = CLI.class.getPackage()
-      .getImplementationVersion();
+  private final String version = CLI.class.getPackage().getImplementationVersion();
   /**
-   * Get the git commit of the ixa-pipe-nerc compiled by looking at the MANIFEST
+   * Get the git commit of the ixa-pipe-opinion compiled by looking at the MANIFEST
    * file.
    */
   private final String commit = CLI.class.getPackage().getSpecificationVersion();
@@ -73,9 +72,9 @@ public class CLI {
    * Argument parser instance.
    */
   private ArgumentParser argParser = ArgumentParsers.newArgumentParser(
-      "ixa-pipe-nerc-" + version + ".jar").description(
-      "ixa-pipe-nerc-" + version
-          + " is a multilingual sequence labeler module developed by IXA NLP Group.\n");
+      "ixa-pipe-opinion-" + version + "-exec.jar").description(
+      "ixa-pipe-opinion-" + version
+          + " is a multilingual opinion tagger developed by IXA NLP Group.\n");
   /**
    * Sub parser instance.
    */
@@ -99,7 +98,7 @@ public class CLI {
    * line parameters.
    */
   public CLI() {
-    subParsers.addParser("tag").help("NER Tagging CLI");
+    oteParser = subParsers.addParser("ote").help("OTE Tagging CLI");
     loadOteParameters();
     serverParser = subParsers.addParser("server").help("Start TCP socket server");
     loadServerParameters();
@@ -108,7 +107,7 @@ public class CLI {
     }
 
   /**
-   * Main entry point of ixa-pipe-nerc.
+   * Main entry point of ixa-pipe-opinion.
    * 
    * @param args
    *          the arguments passed through the CLI
@@ -137,7 +136,7 @@ public class CLI {
     try {
       parsedArguments = argParser.parseArgs(args);
       System.err.println("CLI options: " + parsedArguments);
-      if (args[0].equals("tag")) {
+      if (args[0].equals("ote")) {
     	  extractOte(System.in, System.out);
       } else if (args[0].equals("server")) {
         server();
@@ -146,8 +145,8 @@ public class CLI {
       }
     } catch (ArgumentParserException e) {
       argParser.handleError(e);
-      System.out.println("Run java -jar target/ixa-pipe-nerc-" + version
-          + ".jar (tag|server|client) -help for details");
+      System.out.println("Run java -jar target/ixa-pipe-opinion-" + version
+          + ".jar (ote|server|client) -help for details");
       System.exit(1);
     }
   }  
@@ -189,7 +188,7 @@ public class CLI {
     }
     Properties properties = setOteProperties(model, lang, clearFeatures);
     KAFDocument.LinguisticProcessor newLp = kaf.addLinguisticProcessor(
-        "opinions", "ixa-pipe-nerc-" + Files.getNameWithoutExtension(model), version + "-" + commit);
+        "opinions", "ixa-pipe-opinion-" + Files.getNameWithoutExtension(model), version + "-" + commit);
     newLp.setBeginTimestamp();
     Annotate oteExtractor = new Annotate(properties);
     oteExtractor.annotateOTE(kaf);
@@ -301,7 +300,7 @@ public class CLI {
         .help("Choose language; it defaults to the language value in incoming NAF file.\n");
     oteParser.addArgument("-o","--outputFormat")
         .required(false)
-        .choices("naf", "opennlp")
+        .choices("naf", "conll02")
         .setDefault(Flags.DEFAULT_OUTPUT_FORMAT)
         .help("Choose output format; it defaults to NAF.\n");
   }
