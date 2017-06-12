@@ -68,7 +68,7 @@ public class OpinionTaggerServer {
     ServerSocket socketServer = null;
 
     try {
-      Annotate annotator = new Annotate(properties);
+      AnnotateTargets annotator = new AnnotateTargets(properties);
       System.out.println("-> Trying to listen port... " + port);
       socketServer = new ServerSocket(port);
 
@@ -147,7 +147,7 @@ public class OpinionTaggerServer {
    * @throws JDOMException
    *           if xml error
    */
-  private String getAnnotations(Annotate annotator, String stringFromClient)
+  private String getAnnotations(AnnotateTargets annotator, String stringFromClient)
       throws IOException, JDOMException {
     // get a breader from the string coming from the client
     BufferedReader clientReader = new BufferedReader(new StringReader(

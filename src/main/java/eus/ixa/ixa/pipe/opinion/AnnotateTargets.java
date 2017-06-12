@@ -41,7 +41,7 @@ import eus.ixa.ixa.pipe.ml.utils.Span;
  * @version 2015-04-29
  * 
  */
-public class Annotate {
+public class AnnotateTargets {
 
   /**
    * The factory to construct Name objects.
@@ -57,7 +57,7 @@ public class Annotate {
   private String clearFeatures;
 
   
-  public Annotate(final Properties properties) throws IOException {
+  public AnnotateTargets(final Properties properties) throws IOException {
 
     this.clearFeatures = properties.getProperty("clearFeatures");
     nameFactory = new SequenceLabelFactory();

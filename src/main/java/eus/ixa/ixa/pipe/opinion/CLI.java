@@ -85,6 +85,14 @@ public class CLI {
    */
   private Subparser oteParser;
   /**
+ * Parser to manage the aspect sub-command.
+ */
+private Subparser aspectParser;
+  /**
+ * Parser to manage the polarity sub-command.
+ */
+private Subparser polarityParser;
+  /**
    * Parser to start TCP socket for server-client functionality.
    */
   private Subparser serverParser;
@@ -93,13 +101,22 @@ public class CLI {
    */
   private Subparser clientParser;
   
+  private static final String OTE_PARSER_NAME = "ote";
+  private static final String ASPECT_PARSER_NAME = "aspect";
+  private static final String POLARITY_PARSER_NAME = "pol";
+  private static final String SERVER_PARSER_NAME = "server";
+  private static final String CLIENT_PARSER_NAME = "client";
+  
   /**
    * Construct a CLI object with the sub-parsers to manage the command
    * line parameters.
    */
   public CLI() {
-    oteParser = subParsers.addParser("ote").help("OTE Tagging CLI");
+    oteParser = subParsers.addParser(OTE_PARSER_NAME).help("OTE Tagging CLI");
     loadOteParameters();
+    aspectParser = subParsers.addParser(ASPECT_PARSER_NAME).help("Aspect Tagging CLI");
+    loadAspectParameters();
+    polarityParser = subParsers.addParser(POLARITY_PARSER_NAME).help("Polarity tagging parser");
     serverParser = subParsers.addParser("server").help("Start TCP socket server");
     loadServerParameters();
     clientParser = subParsers.addParser("client").help("Send queries to the TCP socket server");
@@ -136,12 +153,22 @@ public class CLI {
     try {
       parsedArguments = argParser.parseArgs(args);
       System.err.println("CLI options: " + parsedArguments);
-      if (args[0].equals("ote")) {
-    	  extractOte(System.in, System.out);
-      } else if (args[0].equals("server")) {
+      switch(args[0]) {
+      case OTE_PARSER_NAME:
+        extractOte(System.in, System.out);
+        break;
+      case ASPECT_PARSER_NAME:
+        extractAspects(System.in, System.out);
+        break;
+      case POLARITY_PARSER_NAME:
+        extractPolarity(System.in, System.out);
+        break;
+      case SERVER_PARSER_NAME:
         server();
-      } else if (args[0].equals("client")) {
+        break;
+      case CLIENT_PARSER_NAME:
         client(System.in, System.out);
+        break;
       }
     } catch (ArgumentParserException e) {
       argParser.handleError(e);
@@ -190,7 +217,116 @@ public class CLI {
     KAFDocument.LinguisticProcessor newLp = kaf.addLinguisticProcessor(
         "opinions", "ixa-pipe-opinion-" + Files.getNameWithoutExtension(model), version + "-" + commit);
     newLp.setBeginTimestamp();
-    Annotate oteExtractor = new Annotate(properties);
+    AnnotateTargets oteExtractor = new AnnotateTargets(properties);
+    oteExtractor.annotateOTE(kaf);
+    newLp.setEndTimestamp();
+    String kafToString = null;
+    if (outputFormat.equalsIgnoreCase("opennlp")) {
+      kafToString = oteExtractor.annotateOTEsToOpenNLP(kaf);
+    } else {
+      kafToString = oteExtractor.annotateOTEsToKAF(kaf);
+    }
+    bwriter.write(kafToString);
+    bwriter.close();
+    breader.close();
+  }
+  
+  /**
+   * Main method to do Aspect Extraction for ABSA.
+   * 
+   * @param inputStream
+   *          the input stream containing the content to tag
+   * @param outputStream
+   *          the output stream providing the opinion targets
+   * @throws IOException
+   *           exception if problems in input or output streams
+   * @throws JDOMException if xml formatting problems
+   */
+  public final void extractAspects(final InputStream inputStream,
+      final OutputStream outputStream) throws IOException, JDOMException {
+
+    BufferedReader breader = new BufferedReader(new InputStreamReader(
+        inputStream, "UTF-8"));
+    BufferedWriter bwriter = new BufferedWriter(new OutputStreamWriter(
+        outputStream, "UTF-8"));
+    // read KAF document from inputstream
+    KAFDocument kaf = KAFDocument.createFromStream(breader);
+    // load parameters into a properties
+    String tagger = parsedArguments.getString("tagger");
+    String model = parsedArguments.getString("model");
+    String outputFormat = parsedArguments.getString("outputFormat");
+    String clearFeatures = parsedArguments.getString("clearFeatures");
+    // language parameter
+    String lang = null;
+    if (parsedArguments.getString("language") != null) {
+      lang = parsedArguments.getString("language");
+      if (!kaf.getLang().equalsIgnoreCase(lang)) {
+        System.err
+            .println("Language parameter in NAF and CLI do not match!!");
+        System.exit(1);
+      }
+    } else {
+      lang = kaf.getLang();
+    }
+    Properties properties = setAspectProperties(tagger, model, lang, clearFeatures);
+    KAFDocument.LinguisticProcessor newLp = kaf.addLinguisticProcessor(
+        "opinions", "ixa-pipe-opinion-" + Files.getNameWithoutExtension(model), version + "-" + commit);
+    newLp.setBeginTimestamp();
+    AnnotateAspects aspectExtractor = new AnnotateAspects(properties);
+    aspectExtractor.annotateAspects(kaf);
+    newLp.setEndTimestamp();
+    String kafToString = null;
+    if (outputFormat.equalsIgnoreCase("tabulated")) {
+      kafToString = aspectExtractor.annotateAspectsToTabulated(kaf);
+    } else {
+      kafToString = aspectExtractor.annotateAspectsToNAF(kaf);
+    }
+    bwriter.write(kafToString);
+    bwriter.close();
+    breader.close();
+  }
+  
+  /**
+   * Main method to do Opinion Target Extraction (OTE).
+   * 
+   * @param inputStream
+   *          the input stream containing the content to tag
+   * @param outputStream
+   *          the output stream providing the opinion targets
+   * @throws IOException
+   *           exception if problems in input or output streams
+   * @throws JDOMException if xml formatting problems
+   */
+  public final void extractPolarity(final InputStream inputStream,
+      final OutputStream outputStream) throws IOException, JDOMException {
+
+    BufferedReader breader = new BufferedReader(new InputStreamReader(
+        inputStream, "UTF-8"));
+    BufferedWriter bwriter = new BufferedWriter(new OutputStreamWriter(
+        outputStream, "UTF-8"));
+    // read KAF document from inputstream
+    KAFDocument kaf = KAFDocument.createFromStream(breader);
+    // load parameters into a properties
+    String model = parsedArguments.getString("model");
+    String outputFormat = parsedArguments.getString("outputFormat");
+    String clearFeatures = parsedArguments.getString("clearFeatures");
+    // language parameter
+    String lang = null;
+    if (parsedArguments.getString("language") != null) {
+      lang = parsedArguments.getString("language");
+      if (!kaf.getLang().equalsIgnoreCase(lang)) {
+        System.err
+            .println("Language parameter in NAF and CLI do not match!!");
+        System.exit(1);
+      }
+    } else {
+      lang = kaf.getLang();
+    }
+    Properties properties = setOteProperties(model, lang, clearFeatures);
+    KAFDocument.LinguisticProcessor newLp = kaf.addLinguisticProcessor(
+        "opinions", "ixa-pipe-opinion-" + Files.getNameWithoutExtension(model), version + "-" + commit);
+    newLp.setBeginTimestamp();
+    AnnotateTargets oteExtractor = new AnnotateTargets(properties);
     oteExtractor.annotateOTE(kaf);
     newLp.setEndTimestamp();
     String kafToString = null;
@@ -304,6 +440,35 @@ public class CLI {
         .setDefault(Flags.DEFAULT_OUTPUT_FORMAT)
         .help("Choose output format; it defaults to NAF.\n");
   }
+  
+  /**
+   * Create the available parameters for Opinion Target Extraction.
+   */
+  private void loadAspectParameters() {
+    
+    aspectParser.addArgument("-t","--tagger")
+        .required(true)
+        .choices("doc","seq")
+        .help("Choose type the of aspect classifier: using a sequence labeler model or a document classifier model.\n");
+    aspectParser.addArgument("-m", "--model")
+        .required(true)
+        .help("Pass the model to do the tagging as a parameter.\n");
+    aspectParser.addArgument("--clearFeatures")
+        .required(false)
+        .choices("yes", "no", "docstart")
+        .setDefault(Flags.DEFAULT_FEATURE_FLAG)
+        .help("Reset the adaptive features every sentence; defaults to 'no'; if -DOCSTART- marks" +
+                " are present, choose 'docstart'.\n");
+    aspectParser.addArgument("-l","--language")
+        .required(false)
+        .choices("en")
+        .help("Choose language; it defaults to the language value in incoming NAF file.\n");
+    aspectParser.addArgument("-o","--outputFormat")
+        .required(false)
+        .choices("naf", "tabulated")
+        .setDefault(Flags.DEFAULT_OUTPUT_FORMAT)
+        .help("Choose output format; it defaults to NAF.\n");
+  }
 
   /**
    * Create the available parameters for NER tagging.
@@ -333,7 +498,7 @@ public class CLI {
         .help("Choose language.\n");
     serverParser.addArgument("-o","--outputFormat")
         .required(false)
-        .choices("conll03", "conll02", "naf", "opennlp")
+        .choices("conll02", "naf")
         .setDefault(Flags.DEFAULT_OUTPUT_FORMAT)
         .help("Choose output format; it defaults to NAF.\n");
     serverParser.addArgument("--lexer")
@@ -380,6 +545,16 @@ public class CLI {
     oteProperties.setProperty("language", language);
     oteProperties.setProperty("clearFeatures", clearFeatures);
     return oteProperties;
+  }
+  
+  
+  private Properties setAspectProperties(String tagger, String model, String language, String clearFeatures) {
+    Properties aspectProperties = new Properties();
+    aspectProperties.setProperty("tagger", tagger);
+    aspectProperties.setProperty("model", model);
+    aspectProperties.setProperty("language", language);
+    aspectProperties.setProperty("clearFeatures", clearFeatures);
+    return aspectProperties;
   }
   
   
