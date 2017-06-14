@@ -21,12 +21,12 @@ for easy access to its API.
 
 ## TABLE OF CONTENTS
 
-1. [Overview of ixa-pipe-nerc](#overview)
+1. [Overview](#overview)
   + [Available features](#features)
   + [OTE distributed models](#ote-models)
-2. [Usage of ixa-pipe-nerc](#cli-usage)
+2. [Usage](#usage)
   + [Opinion Target Extraction (OTE)](#ote)
-  + [Aspect detection](#aspect)
+  + [Aspect detection](#aspects)
   + [Polarity tagging](#polarity)
   + [Server mode](#server)
   + [Training your own models](#training)
@@ -36,11 +36,15 @@ for easy access to its API.
 
 ## OVERVIEW
 
-ixa-pipe-opinion provides:
+ixa-pipe-opinion provides aspect based sentiment analysis using sequence labeling and document classification trained on SemEval ABSA 2014-2016 datasets.
+
++ **Opinion Target Extraction (OTE)**: Sequence labeler to detect the opinion targets.
++ **Aspect detection**: Sequence labeler and Document Classification to detect aspects of opinions.
++ **Polarity tagging**: For a document and/or sentence the polarity is tagged.
 
 We provide competitive models based on robust local features and exploiting unlabeled data
 via clustering features. The clustering features are based on Brown, Clark (2003)
-and Word2Vec clustering plus some gazetteers in some cases.
+and Word2Vec clustering. 
 To avoid duplication of efforts, we use and contribute to the API provided by the
 [Apache OpenNLP project](http://opennlp.apache.org) with our own custom developed features for each of the three tasks.
 
@@ -55,9 +59,9 @@ properties files, please do check this document.
 + **English Models**:
     + Trained on SemEval 2014 restaurants dataset.
     + Trained on SemEval 2015 restaurants dataset (ote subtask winner).
-    + SemEval 2016 restaurants dataset.
+    + Trained on SemEval 2016 restaurants dataset.
 
-## CLI-USAGE
+## Usage
 
 ixa-pipe-opinion provides a runable jar with the following command-line basic functionalities:
 
@@ -65,8 +69,8 @@ ixa-pipe-opinion provides a runable jar with the following command-line basic fu
    opinion target extraction (OTE).
 2. **aspect**: reads a NAF document containing *wf* and *term* elements and detects aspects.
 3. **pol**: reads a NAF document containing *wf* and *term* elements and tags polarity.
-2. **server**: starts a TCP service loading the model and required resources.
-2. **client**: sends a NAF document to a running TCP server.
+4. **server**: starts a TCP service loading the model and required resources.
+5. **client**: sends a NAF document to a running TCP server.
 
 Each of these functionalities are accessible by adding (ote|aspect|pol|server|client) as a
 subcommand to ixa-pipe-opinion-${version}-exec.jar. Please read below and check the -help
@@ -77,13 +81,13 @@ java -jar target/ixa-pipe-opinion-${version}-exec.jar (ote|aspect|pol|server|cli
 ````
 ### OTE
 
-As for NER tagging, the ote requires an input NAF with *wf* and *term* elements:
+Opinion Target Extraction requires an input NAF with *wf* and *term* elements:
 
 ````shell
-cat file.txt | ixa-pipe-tok | ixa-pipe-pos | java -jar $PATH/target/ixa-pipe-nerc-${version}-exec.jar ote -m model.bin
+cat file.txt | java -jar ixa-pipe-tok-$version-exec.jar tok -l $lang | java -jar ixa-pipe-pos-$version-exec.jar tag -m posmodel.bin -lm lemma-model.bin | java -jar ixa-pipe-opinion-${version}-exec.jar ote -m model.bin
 ````
 
-ixa-pipe-nerc reads NAF documents (with *wf* and *term* elements) via standard input and outputs opinion targets in NAF
+ixa-pipe-opinion reads NAF documents (with *wf* and *term* elements) via standard input and outputs opinion targets in NAF
 through standard output. The NAF format specification is here:
 
 (http://wordpress.let.vupr.nl/naf/)
@@ -93,80 +97,81 @@ You can get the necessary input for ixa-pipe-nerc by piping
 [ixa-pipe-pos](https://github.com/ixa-ehu/ixa-pipe-pos) as shown in the
 example.
 
-There are several options to tag with ixa-pipe-nerc:
+There are several options to tag with ixa-pipe-opinion (check the -help parameter for more info).
 
 + **model**: pass the model as a parameter.
 + **language**: pass the language as a parameter.
 + **outputFormat**: Output annotation in a format: available OpenNLP native format and NAF. It defaults to NAF.
 
-**Example**:
+### Aspects
+
+Aspect detection requires an input NAF with *wf* and *term* elements. It is also required to specify the tagger type: Document Classification (doc) or Sequence labeling (seq).
 
 ````shell
-cat file.txt | ixa-pipe-tok | ixa-pipe-pos | java -jar $PATH/target/ixa-pipe-nerc-${version}-exec.jar ote -m ote-models-$version/en/ote-semeval2014-restaurants.bin
+cat file.txt | java -jar ixa-pipe-tok-$version-exec.jar tok -l $lang | java -jar ixa-pipe-pos-$version-exec.jar tag -m posmodel.bin -lm lemma-model.bin | java -jar ixa-pipe-opinion-${version}-exec.jar aspect -t seq -m model.bin
 ````
+ixa-pipe-opinion reads NAF documents (with *wf* and *term* elements) via standard input and outputs opinion expressions containing the aspects for each sentence. The NAF format specification is here:
+
+(http://wordpress.let.vupr.nl/naf/)
+
+You can get the necessary input for ixa-pipe-nerc by piping
+[ixa-pipe-tok](https://github.com/ixa-ehu/ixa-pipe-tok) and
+[ixa-pipe-pos](https://github.com/ixa-ehu/ixa-pipe-pos) as shown in the
+example.
+
+There are several other options to tag with ixa-pipe-opinion (check the -help parameter for more info).
+
++ **model**: pass the model as a parameter.
++ **tagger**: choose between doc (document classification) or seq (Sequence labeling).
++ **language**: pass the language as a parameter.
++ **outputFormat**: Output annotation in a format: available OpenNLP native format and NAF. It defaults to NAF.
+
+### Polarity
+
+Polarity tagging requires an input NAF with *wf* and *term* elements.
+
+````shell
+cat file.txt | java -jar ixa-pipe-tok-$version-exec.jar tok -l $lang | java -jar ixa-pipe-pos-$version-exec.jar tag -m posmodel.bin -lm lemma-model.bin | java -jar ixa-pipe-opinion-${version}-exec.jar pol -m model.bin
+````
+The polarity parameter of ixa-pipe-opinion reads NAF documents (with *wf* and *term* elements) via standard input and outputs opinion expressions containing the polarity for each sentence. The NAF format specification is here:
+
+(http://wordpress.let.vupr.nl/naf/)
+
+You can get the necessary input for ixa-pipe-nerc by piping
+[ixa-pipe-tok](https://github.com/ixa-ehu/ixa-pipe-tok) and
+[ixa-pipe-pos](https://github.com/ixa-ehu/ixa-pipe-pos) as shown in the
+example.
+
+There are several other options to tag with ixa-pipe-opinion (check the -help parameter for more info).
+
++ **model**: pass the model as a parameter.
++ **language**: pass the language as a parameter.
++ **outputFormat**: Output annotation in a format: available OpenNLP native format and NAF. It defaults to NAF.
++ **dict**: Tag tokens with a polarity lexicon.
 
 ### Server
 
 We can start the TCP server as follows:
 
 ````shell
-java -jar target/ixa-pipe-nerc-${version}-exec.jar server -l en --port 2060 -m en-91-18-conll03.bin
+java -jar target/ixa-pipe-opinion-${version}-exec.jar server -l en --port 2030 -t aspect -c seq -m model.bin
 ````
 Once the server is running we can send NAF documents containing (at least) the term layer like this:
 
 ````shell
- cat file.pos.naf | java -jar target/ixa-pipe-nerc-${version}-exec.jar client -p 2060
-````
-
-### Training
-
-To train a new model for NERC, OTE or SST, you just need to pass a training parameters file as an
-argument. As it has been already said, the options are documented in the
-template trainParams.properties file.
-
-**Example**:
-
-````shell
-java -jar target/ixa.pipe.nerc-$version.jar train -p trainParams.properties
-````
-**Training with Features using External Resources**: For training with dictionary or clustering
-based features (Brown, Clark and Word2Vec) you need to pass the lexicon as
-value of the respective feature in the prop file. This is only for training, as
-for tagging or evaluation the model is serialized with all resources included.
-
-### Evaluation
-
-You can evaluate a trained model or a prediction data against a reference data
-or testset.
-
-+ **language**: provide the language.
-+ **model**: if evaluating a model, pass the model.
-+ **testset**: the testset or reference set.
-+ **corpusFormat**: the format of the reference set and of the prediction set
-  if --prediction option is chosen.
-+ **prediction**: evaluate against a  prediction corpus instead of against a
-  model.
-+ **evalReport**: detail of the evaluation report
-  + **brief**: just the F1, precision and recall scores
-  + **detailed**, the F1, precision and recall per class
-  + **error**: the list of false positives and negatives
-
-**Example**:
-
-````shell
-java -jar target/ixa.pipe.nerc-$version.jar eval -m nerc-models-$version/en/en-local-conll03.bin -l en -t conll03.testb
+ cat file.pos.naf | java -jar target/ixa-pipe-opinion-${version}-exec.jar client -p 2060
 ````
 
 ## API
 
-The easiest way to use ixa-pipe-nerc programatically is via Apache Maven. Add
+The easiest way to use ixa-pipe-opinion programatically is via Apache Maven. Add
 this dependency to your pom.xml:
 
 ````shell
 <dependency>
     <groupId>eus.ixa</groupId>
-    <artifactId>ixa-pipe-nerc</artifactId>
-    <version>1.6.0</version>
+    <artifactId>ixa-pipe-opinion</artifactId>
+    <version>1.0.0</version>
 </dependency>
 ````
 
@@ -175,7 +180,7 @@ this dependency to your pom.xml:
 The javadoc of the module is located here:
 
 ````shell
-ixa-pipe-nerc/target/ixa-pipe-nerc-$version-javadoc.jar
+ixa-pipe-opinion/target/ixa-pipe-opinion-$version-javadoc.jar
 ````
 
 ## Module contents
@@ -195,22 +200,22 @@ The contents of the module are the following:
 
 Installing the ixa-pipe-nerc requires the following steps:
 
-If you already have installed in your machine the Java 1.7+ and MAVEN 3, please go to step 3
+If you already have installed in your machine the Java 1.8+ and MAVEN 3, please go to step 3
 directly. Otherwise, follow these steps:
 
-### 1. Install JDK 1.7 or JDK 1.8
+### 1. Install JDK 1.8
 
-If you do not install JDK 1.7+ in a default location, you will probably need to configure the PATH in .bashrc or .bash_profile:
+If you do not install JDK 1.8+ in a default location, you will probably need to configure the PATH in .bashrc or .bash_profile:
 
 ````shell
-export JAVA_HOME=/yourpath/local/java7
+export JAVA_HOME=/yourpath/local/java8
 export PATH=${JAVA_HOME}/bin:${PATH}
 ````
 
 If you use tcsh you will need to specify it in your .login as follows:
 
 ````shell
-setenv JAVA_HOME /usr/java/java17
+setenv JAVA_HOME /usr/java/java8
 setenv PATH ${JAVA_HOME}/bin:${PATH}
 ````
 
@@ -220,26 +225,26 @@ If you re-login into your shell and run the command
 java -version
 ````
 
-You should now see that your JDK is 1.7 or 1.8.
+You should now see that your JDK is 1.8.
 
 ### 2. Install MAVEN 3
 
-Download MAVEN 3 from
+Download MAVEN from
 
 ````shell
-wget http://apache.rediris.es/maven/maven-3/3.0.5/binaries/apache-maven-3.0.5-bin.tar.gz
+https://maven.apache.org/download.cgi
 ````
 Now you need to configure the PATH. For Bash Shell:
 
 ````shell
-export MAVEN_HOME=/home/ragerri/local/apache-maven-3.0.5
+export MAVEN_HOME=/home/ragerri/local/apache-maven-3.3.9
 export PATH=${MAVEN_HOME}/bin:${PATH}
 ````
 
 For tcsh shell:
 
 ````shell
-setenv MAVEN3_HOME ~/local/apache-maven-3.0.5
+setenv MAVEN3_HOME ~/local/apache-maven-3.3.5
 setenv PATH ${MAVEN3}/bin:{PATH}
 ````
 
@@ -248,7 +253,6 @@ If you re-login into your shell and run the command
 ````shell
 mvn -version
 ````
-
 You should see reference to the MAVEN version you have just installed plus the JDK that is using.
 
 ### 3. Get module source code
@@ -256,24 +260,24 @@ You should see reference to the MAVEN version you have just installed plus the J
 If you must get the module source code from here do this:
 
 ````shell
-git clone https://github.com/ixa-ehu/ixa-pipe-nerc
+git clone https://github.com/ixa-ehu/ixa-pipe-opinion
 ````
 
 ### 4. Compile
 
-Execute this command to compile ixa-pipe-nerc:
+Execute this command to compile ixa-pipe-opinion:
 
 ````shell
-cd ixa-pipe-nerc
+cd ixa-pipe-opinion
 mvn clean package
 ````
 This step will create a directory called target/ which contains various directories and files.
 Most importantly, there you will find the module executable:
 
-ixa-pipe-nerc-${version}-exec.jar
+ixa-pipe-opinion-${version}-exec.jar
 
 This executable contains every dependency the module needs, so it is completely portable as long
-as you have a JVM 1.7 installed.
+as you have a JVM 1.8 installed.
 
 To install the module in the local maven repository, usually located in ~/.m2/, execute:
 
