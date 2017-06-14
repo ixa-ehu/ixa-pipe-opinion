@@ -1,5 +1,5 @@
 /*
- *  Copyright 2015 Rodrigo Agerri
+ *  Copyright 2017 Rodrigo Agerri
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -49,7 +49,7 @@ import eus.ixa.ixa.pipe.ml.utils.Flags;
  * tagger.
  * 
  * @author ragerri
- * @version 2015-02-26
+ * @version 2017-06-14
  * 
  */
 public class CLI {
@@ -117,6 +117,7 @@ private Subparser polarityParser;
     aspectParser = subParsers.addParser(ASPECT_PARSER_NAME).help("Aspect Tagging CLI");
     loadAspectParameters();
     polarityParser = subParsers.addParser(POLARITY_PARSER_NAME).help("Polarity tagging parser");
+    loadPolarityParameters();
     serverParser = subParsers.addParser("server").help("Start TCP socket server");
     loadServerParameters();
     clientParser = subParsers.addParser("client").help("Send queries to the TCP socket server");
@@ -173,7 +174,7 @@ private Subparser polarityParser;
     } catch (ArgumentParserException e) {
       argParser.handleError(e);
       System.out.println("Run java -jar target/ixa-pipe-opinion-" + version
-          + ".jar (ote|server|client) -help for details");
+          + ".jar (absa|aspect|ote|pol|server|client) -help for details");
       System.exit(1);
     }
   }  
@@ -271,13 +272,18 @@ private Subparser polarityParser;
     Properties properties = setAspectProperties(tagger, model, lang, clearFeatures);
     KAFDocument.LinguisticProcessor newLp = kaf.addLinguisticProcessor(
         "opinions", "ixa-pipe-opinion-" + Files.getNameWithoutExtension(model), version + "-" + commit);
+    AnnotateAspects aspectExtractor = null;
+    if (tagger.equalsIgnoreCase("doc")) {
+      aspectExtractor = new DocAnnotateAspects(properties);
+    } else {
+      aspectExtractor = new SeqAnnotateAspects(properties);
+    }
     newLp.setBeginTimestamp();
-    AnnotateAspects aspectExtractor = new AnnotateAspects(properties);
     aspectExtractor.annotateAspects(kaf);
     newLp.setEndTimestamp();
     String kafToString = null;
     if (outputFormat.equalsIgnoreCase("tabulated")) {
-      kafToString = aspectExtractor.annotateAspectsToTabulated(kaf);
+      kafToString = aspectExtractor.annotateAspectsToNAF(kaf);
     } else {
       kafToString = aspectExtractor.annotateAspectsToNAF(kaf);
     }
@@ -308,6 +314,7 @@ private Subparser polarityParser;
     KAFDocument kaf = KAFDocument.createFromStream(breader);
     // load parameters into a properties
     String model = parsedArguments.getString("model");
+    String dictionary = parsedArguments.getString("dictionary");
     String outputFormat = parsedArguments.getString("outputFormat");
     String clearFeatures = parsedArguments.getString("clearFeatures");
     // language parameter
@@ -322,18 +329,18 @@ private Subparser polarityParser;
     } else {
       lang = kaf.getLang();
     }
-    Properties properties = setOteProperties(model, lang, clearFeatures);
+    Properties properties = setPolarityProperties(model, dictionary, lang, clearFeatures);
     KAFDocument.LinguisticProcessor newLp = kaf.addLinguisticProcessor(
         "opinions", "ixa-pipe-opinion-" + Files.getNameWithoutExtension(model), version + "-" + commit);
     newLp.setBeginTimestamp();
-    AnnotateTargets oteExtractor = new AnnotateTargets(properties);
-    oteExtractor.annotateOTE(kaf);
+    AnnotatePolarity polarityExtractor = new AnnotatePolarity(properties);
+    polarityExtractor.annotatePolarity(kaf);
     newLp.setEndTimestamp();
     String kafToString = null;
-    if (outputFormat.equalsIgnoreCase("opennlp")) {
-      kafToString = oteExtractor.annotateOTEsToOpenNLP(kaf);
+    if (outputFormat.equalsIgnoreCase("tabulated")) {
+      kafToString = polarityExtractor.annotatePolarityToTabulated(kaf);
     } else {
-      kafToString = oteExtractor.annotateOTEsToKAF(kaf);
+      kafToString = polarityExtractor.annotatePolarityToNAF(kaf);
     }
     bwriter.write(kafToString);
     bwriter.close();
@@ -349,14 +356,11 @@ private Subparser polarityParser;
     // load parameters into a properties
     String port = parsedArguments.getString("port");
     String model = parsedArguments.getString("model");
-    String lexer = parsedArguments.getString("lexer");
-    String dictTag = parsedArguments.getString("dictTag");
-    String dictPath = parsedArguments.getString("dictPath");
     String clearFeatures = parsedArguments.getString("clearFeatures");
     String outputFormat = parsedArguments.getString("outputFormat");
     // language parameter
     String lang = parsedArguments.getString("language");
-    Properties serverproperties = setNameServerProperties(port, model, lang, lexer, dictTag, dictPath, clearFeatures, outputFormat);
+    Properties serverproperties = setNameServerProperties(port, model, lang, clearFeatures, outputFormat);
     new OpinionTaggerServer(serverproperties);
   }
   
@@ -469,17 +473,45 @@ private Subparser polarityParser;
         .setDefault(Flags.DEFAULT_OUTPUT_FORMAT)
         .help("Choose output format; it defaults to NAF.\n");
   }
+  
+  /**
+   * Create the available parameters for Opinion Target Extraction.
+   */
+  private void loadPolarityParameters() {
+   
+    polarityParser.addArgument("-m", "--model")
+        .required(true)
+        .help("Pass the model to do the tagging as a parameter.\n");
+    polarityParser.addArgument("--clearFeatures")
+        .required(false)
+        .choices("yes", "no", "docstart")
+        .setDefault(Flags.DEFAULT_FEATURE_FLAG)
+        .help("Reset the adaptive features every sentence; defaults to 'no'; if -DOCSTART- marks" +
+                " are present, choose 'docstart'.\n");
+    polarityParser.addArgument("-l","--language")
+        .required(false)
+        .choices("en")
+        .help("Choose language; it defaults to the language value in incoming NAF file.\n");
+    polarityParser.addArgument("-o","--outputFormat")
+        .required(false)
+        .choices("naf", "tabulated")
+        .setDefault(Flags.DEFAULT_OUTPUT_FORMAT)
+        .help("Choose output format; it defaults to NAF.\n");
+    polarityParser.addArgument("-d","--dictionary")
+        .required(false)
+        .setDefault(Flags.DEFAULT_DICT_OPTION)
+        .help("Provide polarity lexicon to tag polarity at token/lemma level.\n");
+  }
 
   /**
-   * Create the available parameters for NER tagging.
+   * Create the available parameters for ABSA analysis.
    */
   private void loadServerParameters() {
     
     serverParser.addArgument("-t","--task")
          .required(false)
-         .choices("ner", "ote", "sst")
-         .setDefault(Flags.DEFAULT_TASK)
-         .help("Choose the type of sequence labeling task.\n");
+         .choices("absa", "ote", "aspect", "polarity")
+         .help("Choose the task.\n");
     serverParser.addArgument("-p", "--port")
         .required(true)
         .help("Port to be assigned to the server.\n");
@@ -494,30 +526,13 @@ private Subparser polarityParser;
                 " are present, choose 'docstart'.\n");
     serverParser.addArgument("-l","--language")
         .required(true)
-        .choices("de", "en", "es", "eu", "it", "nl")
+        .choices("en", "es", "fr", "tr", "ru")
         .help("Choose language.\n");
     serverParser.addArgument("-o","--outputFormat")
         .required(false)
         .choices("conll02", "naf")
         .setDefault(Flags.DEFAULT_OUTPUT_FORMAT)
         .help("Choose output format; it defaults to NAF.\n");
-    serverParser.addArgument("--lexer")
-        .choices("numeric")
-        .setDefault(Flags.DEFAULT_LEXER)
-        .required(false)
-        .help("Use lexer rules for NERC tagging; it defaults to false.\n");
-    serverParser.addArgument("--dictTag")
-        .required(false)
-        .choices("tag", "post")
-        .setDefault(Flags.DEFAULT_DICT_OPTION)
-        .help("Choose to directly tag entities by dictionary look-up; if the 'tag' option is chosen, " +
-                "only tags entities found in the dictionary; if 'post' option is chosen, it will " +
-                "post-process the results of the statistical model.\n");
-    serverParser.addArgument("--dictPath")
-        .required(false)
-        .setDefault(Flags.DEFAULT_DICT_PATH)
-        .help("Provide the path to the dictionaries for direct dictionary tagging; it ONLY WORKS if --dictTag " +
-                "option is activated.\n");
   }
   
   private void loadClientParameters() {
@@ -557,15 +572,21 @@ private Subparser polarityParser;
     return aspectProperties;
   }
   
+  private Properties setPolarityProperties(String model, String dictionary, String language, String clearFeatures) {
+    Properties aspectProperties = new Properties();
+    aspectProperties.setProperty("model", model);
+    aspectProperties.setProperty("dictionary", dictionary);
+    aspectProperties.setProperty("language", language);
+    aspectProperties.setProperty("clearFeatures", clearFeatures);
+    return aspectProperties;
+  }
   
-  private Properties setNameServerProperties(String port, String model, String language, String lexer, String dictTag, String dictPath, String clearFeatures, String outputFormat) {
+  
+  private Properties setNameServerProperties(String port, String model, String language, String clearFeatures, String outputFormat) {
     Properties serverProperties = new Properties();
     serverProperties.setProperty("port", port);
     serverProperties.setProperty("model", model);
     serverProperties.setProperty("language", language);
-    serverProperties.setProperty("ruleBasedOption", lexer);
-    serverProperties.setProperty("dictTag", dictTag);
-    serverProperties.setProperty("dictPath", dictPath);
     serverProperties.setProperty("clearFeatures", clearFeatures);
     serverProperties.setProperty("outputFormat", outputFormat);
     return serverProperties;
