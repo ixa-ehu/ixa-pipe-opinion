@@ -21,12 +21,12 @@ for easy access to its API.
 
 ## TABLE OF CONTENTS
 
-1. [Overview of ixa-pipe-nerc](#overview)
+1. [Overview of ixa-pipe-opinion](#overview)
   + [Available features](#features)
   + [OTE distributed models](#ote-models)
 2. [Usage of ixa-pipe-nerc](#cli-usage)
   + [Opinion Target Extraction (OTE)](#ote)
-  + [Aspect detection](#aspect)
+  + [Aspect detection](#aspects)
   + [Polarity tagging](#polarity)
   + [Server mode](#server)
   + [Training your own models](#training)
@@ -36,11 +36,15 @@ for easy access to its API.
 
 ## OVERVIEW
 
-ixa-pipe-opinion provides:
+ixa-pipe-opinion provides aspect based sentiment analysis using sequence labeling and document classification trained on SemEval ABSA 2014-2016 datasets.
+
++ **Opinion Target Extraction (OTE)**: Sequence labeler to detect the opinion targets.
++ **Aspect detection**: Sequence labeler and Document Classification to detect aspects of opinions.
++ **Polarity tagging**: For a document and/or sentence the polarity is tagged.
 
 We provide competitive models based on robust local features and exploiting unlabeled data
 via clustering features. The clustering features are based on Brown, Clark (2003)
-and Word2Vec clustering plus some gazetteers in some cases.
+and Word2Vec clustering. 
 To avoid duplication of efforts, we use and contribute to the API provided by the
 [Apache OpenNLP project](http://opennlp.apache.org) with our own custom developed features for each of the three tasks.
 
@@ -55,7 +59,7 @@ properties files, please do check this document.
 + **English Models**:
     + Trained on SemEval 2014 restaurants dataset.
     + Trained on SemEval 2015 restaurants dataset (ote subtask winner).
-    + SemEval 2016 restaurants dataset.
+    + Trained on SemEval 2016 restaurants dataset.
 
 ## CLI-USAGE
 
@@ -65,8 +69,8 @@ ixa-pipe-opinion provides a runable jar with the following command-line basic fu
    opinion target extraction (OTE).
 2. **aspect**: reads a NAF document containing *wf* and *term* elements and detects aspects.
 3. **pol**: reads a NAF document containing *wf* and *term* elements and tags polarity.
-2. **server**: starts a TCP service loading the model and required resources.
-2. **client**: sends a NAF document to a running TCP server.
+4. **server**: starts a TCP service loading the model and required resources.
+5. **client**: sends a NAF document to a running TCP server.
 
 Each of these functionalities are accessible by adding (ote|aspect|pol|server|client) as a
 subcommand to ixa-pipe-opinion-${version}-exec.jar. Please read below and check the -help
@@ -77,13 +81,13 @@ java -jar target/ixa-pipe-opinion-${version}-exec.jar (ote|aspect|pol|server|cli
 ````
 ### OTE
 
-As for NER tagging, the ote requires an input NAF with *wf* and *term* elements:
+Opinion Target Extraction requires an input NAF with *wf* and *term* elements:
 
 ````shell
-cat file.txt | ixa-pipe-tok | ixa-pipe-pos | java -jar $PATH/target/ixa-pipe-nerc-${version}-exec.jar ote -m model.bin
+cat file.txt | java -jar ixa-pipe-tok-$version-exec.jar tok -l $lang | java -jar ixa-pipe-pos-$version-exec.jar tag -m posmodel.bin -lm lemma-model.bin | java -jar ixa-pipe-opinion-${version}-exec.jar ote -m model.bin
 ````
 
-ixa-pipe-nerc reads NAF documents (with *wf* and *term* elements) via standard input and outputs opinion targets in NAF
+ixa-pipe-opinion reads NAF documents (with *wf* and *term* elements) via standard input and outputs opinion targets in NAF
 through standard output. The NAF format specification is here:
 
 (http://wordpress.let.vupr.nl/naf/)
@@ -93,17 +97,58 @@ You can get the necessary input for ixa-pipe-nerc by piping
 [ixa-pipe-pos](https://github.com/ixa-ehu/ixa-pipe-pos) as shown in the
 example.
 
-There are several options to tag with ixa-pipe-nerc:
+There are several options to tag with ixa-pipe-opinion (check the -help parameter for more info).
 
 + **model**: pass the model as a parameter.
 + **language**: pass the language as a parameter.
 + **outputFormat**: Output annotation in a format: available OpenNLP native format and NAF. It defaults to NAF.
 
-**Example**:
+### Aspects
+
+Aspect detection requires an input NAF with *wf* and *term* elements. It is also required to specify the tagger type: Document Classification (doc) or Sequence labeling (seq).
 
 ````shell
-cat file.txt | ixa-pipe-tok | ixa-pipe-pos | java -jar $PATH/target/ixa-pipe-nerc-${version}-exec.jar ote -m ote-models-$version/en/ote-semeval2014-restaurants.bin
+cat file.txt | java -jar ixa-pipe-tok-$version-exec.jar tok -l $lang | java -jar ixa-pipe-pos-$version-exec.jar tag -m posmodel.bin -lm lemma-model.bin | java -jar ixa-pipe-opinion-${version}-exec.jar aspect -t seq -m model.bin
 ````
+ixa-pipe-opinion reads NAF documents (with *wf* and *term* elements) via standard input and outputs opinion expressions containing the aspects for each sentence. The NAF format specification is here:
+
+(http://wordpress.let.vupr.nl/naf/)
+
+You can get the necessary input for ixa-pipe-nerc by piping
+[ixa-pipe-tok](https://github.com/ixa-ehu/ixa-pipe-tok) and
+[ixa-pipe-pos](https://github.com/ixa-ehu/ixa-pipe-pos) as shown in the
+example.
+
+There are several other options to tag with ixa-pipe-opinion (check the -help parameter for more info).
+
++ **model**: pass the model as a parameter.
++ **tagger**: choose between doc (document classification) or seq (Sequence labeling).
++ **language**: pass the language as a parameter.
++ **outputFormat**: Output annotation in a format: available OpenNLP native format and NAF. It defaults to NAF.
+
+### Polarity
+
+Polarity tagging requires an input NAF with *wf* and *term* elements.
+
+````shell
+cat file.txt | java -jar ixa-pipe-tok-$version-exec.jar tok -l $lang | java -jar ixa-pipe-pos-$version-exec.jar tag -m posmodel.bin -lm lemma-model.bin | java -jar ixa-pipe-opinion-${version}-exec.jar pol -m model.bin
+````
+ixa-pipe-opinion reads NAF documents (with *wf* and *term* elements) via standard input and outputs opinion expressions containing the aspects for each sentence. The NAF format specification is here:
+
+(http://wordpress.let.vupr.nl/naf/)
+
+You can get the necessary input for ixa-pipe-nerc by piping
+[ixa-pipe-tok](https://github.com/ixa-ehu/ixa-pipe-tok) and
+[ixa-pipe-pos](https://github.com/ixa-ehu/ixa-pipe-pos) as shown in the
+example.
+
+There are several other options to tag with ixa-pipe-opinion (check the -help parameter for more info).
+
++ **model**: pass the model as a parameter.
++ **tagger**: choose between doc (document classification) or seq (Sequence labeling).
++ **language**: pass the language as a parameter.
++ **outputFormat**: Output annotation in a format: available OpenNLP native format and NAF. It defaults to NAF.
+
 
 ### Server
 
