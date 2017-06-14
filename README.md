@@ -1,35 +1,33 @@
 
-ixa-pipe-nerc
+ixa-pipe-opinion
 =============
 
-ixa-pipe-nerc is a multilingual Sequence Labeler for tasks such as Named Entity
-Recognition (NERC), Opinion Target Extraction (OTE) and SuperSense Tagging (SST).
-**Current version is 1.6.0**
+ixa-pipe-opinion is a multilingual Aspect Based Opinion tagger consisting of Opinion Target Extraction (OTE), Aspect detection and polarity tagging.
 
-ixa-pipe-nerc is part of IXA pipes, a multilingual set of NLP tools developed
+ixa-pipe-opinion is part of IXA pipes, a multilingual set of NLP tools developed
 by the IXA NLP Group [http://ixa2.si.ehu.es/ixa-pipes].
 
 Please go to [http://ixa2.si.ehu.es/ixa-pipes] for general information about the IXA
 pipes tools but also for **official releases, including source code and binary
 packages for all the tools in the IXA pipes toolkit**.
 
-This document is intended to be the **usage guide of ixa-pipe-nerc**. If you really need to clone
+This document is intended to be the **usage guide of ixa-pipe-opinion**. If you really need to clone
 and install this repository instead of using the releases provided in
 [http://ixa2.si.ehu.es/ixa-pipes], please scroll down to the end of the document for
 the [installation instructions](#installation).
 
-**NOTICE!!**: ixa-pipe-nerc is now in [Maven Central](http://search.maven.org/)
+**NOTICE!!**: ixa-pipe-opinion is now in [Maven Central](http://search.maven.org/)
 for easy access to its API.
 
 ## TABLE OF CONTENTS
 
 1. [Overview of ixa-pipe-nerc](#overview)
   + [Available features](#features)
-  + [NERC distributed models](#nerc-models)
   + [OTE distributed models](#ote-models)
 2. [Usage of ixa-pipe-nerc](#cli-usage)
-  + [NERC tagging](#tagging)
   + [Opinion Target Extraction (OTE)](#ote)
+  + [Aspect detection](#aspect)
+  + [Polarity tagging](#polarity)
   + [Server mode](#server)
   + [Training your own models](#training)
   + [Evaluation](#evaluation)
@@ -38,20 +36,7 @@ for easy access to its API.
 
 ## OVERVIEW
 
-ixa-pipe-nerc provides:
-
-+ **NERC** for Basque, English, Spanish, Dutch, German and Italian. The named entity types are based on:
-   + **CONLL**: LOCATION, MISC, ORGANIZATION and PERSON. See [CoNLL 2002](http://www.clips.ua.ac.be/conll2002/ner/) and [CoNLL 2003](http://www.clips.ua.ac.be/conll2003/ner/) for more information.
-   + **SONAR-1**: for Dutch, six main types, including CoNLL types plus PRODUCT and EVENT.
-   + **Ancora**: for Spanish, six main types, including CoNLL types plus DATE and NUMBER.
-+ **Opinion Target Extraction** (OTE) for English. The models are trained on the SemEval 2014 and 2015 datasets;
-  **ixa-pipe-nerc was the best system** in [SemEval 2015 OTE subtask within task 12](http://alt.qcri.org/semeval2015/task12/).
-+ **SuperSense Tagging** (SST) for English. The models are trained on Semcor.
-
-Every model is self-contained, that is, the prop files are not needed to use them.
-You will find for each model a properties file describing its training although it is
-not needed to run the model. Please see the traininParams.properties template file
-for all available training options and documentation.
+ixa-pipe-opinion provides:
 
 We provide competitive models based on robust local features and exploiting unlabeled data
 via clustering features. The clustering features are based on Brown, Clark (2003)
@@ -61,129 +46,34 @@ To avoid duplication of efforts, we use and contribute to the API provided by th
 
 ### Features
 
-**A description of every feature is provided in the trainParams.properties properties
-file** distributed with ixa-pipe-nerc. As the training functionality is configured in
-properties files, please do check this document. For each model distributed,
-there is a prop file which describes the training of the model, as well as a
-log file which provides details about the evaluation and training process.
-
-### NERC-Models
-
-Every result in reported here can be reproduced using the evaluation functionality of ixa-pipe-nerc or
-with the [conlleval script](http://www.cnts.ua.ac.be/conll2002/ner/bin/conlleval.txt) using these scripts:
-
-**Reproducing results with conlleval**: [conlleval-results](http://ixa2.si.ehu.es/ixa-pipes/models/results-conlleval.tar.gz)
-
-**NERC models**:
-
-  + **Release 1.5.4** [685MB]: [nerc-models-latest.tgz](http://ixa2.si.ehu.es/ixa-pipes/models/nerc-models-1.5.4.tgz)
-
-Every model is trained with the averaged Perceptron algorithm as described in (Collins 2002) and as implemented
-in Apache OpenNLP.
-
-+ **Basque**: eu-clusters model, trained on egunkaria dataset, F1 76.72 on 3 class evaluation and F1 75.40 on 4 classes.
-
-+ **English Models**:
-
-  + **CoNLL 2003 models**: We distribute models trained with local features
-  and with external knowledge. Each of the models improve in F1 (reported on testb data)
-  but they get somewhat slower:
-    + CoNLL 2003 local + brown features: F1 88.50
-    + CoNLL 2003 local + clark features: F1 88.97
-    + CoNLL 2003 light clusters model: F1 90.27
-    + CoNLL 2003 clusters model: F1 90.82
-    + CoNLL 2003 clusters + dicts: F1 91.19
-
-  + **Combined models**: trained using Ontonotes 4.0, conll03 and muc 7 data, good for out of domain usage.
-
-+ **Spanish Models**:
-
-  + CoNLL 2002 clusters: F1 84.16
-  + CoNLL 2002 clusters + dict: F1 84.30
-
-+ **Dutch Models**:
-  + CoNLL 2002 clusters: F1 84.23
-  + CoNLL 2002 clusters + dict: F1 84.91
-
-+ **German Models**:
-  + CoNLL 2003 clusters + dict: F1 76.42
-
-+ **Italian Models**:
-  + Evalita09 clusters: F1 80.38
+**A description of every feature is provided in the sequenceTrainer.properties and docTrainer.properties
+file** distributed with ixa-pipe-ml. As the training functionality is configured in
+properties files, please do check this document.
 
 ### OTE-Models
-
-+ **Latest models**: [ote-models-latest](http://ixa2.si.ehu.es/ixa-pipes/models/ote-models-1.5.0.tgz)
 
 + **English Models**:
     + Trained on SemEval 2014 restaurants dataset.
     + Trained on SemEval 2015 restaurants dataset (ote subtask winner).
+    + SemEval 2016 restaurants dataset.
 
 ## CLI-USAGE
 
-ixa-pipe-nerc provides a runable jar with the following command-line basic functionalities:
+ixa-pipe-opinion provides a runable jar with the following command-line basic functionalities:
 
-1. **server**: starts a TCP service loading the model and required resources.
-2. **client**: sends a NAF document to a running TCP server.
-2. **tag**: reads a NAF document containing *wf* and *term* elements and tags named
-   entities.
-2. **ote**: reads a NAF document containing *wf* and *term* elements and performs
+1. **ote**: reads a NAF document containing *wf* and *term* elements and performs
    opinion target extraction (OTE).
-3. **train**: trains new models for NERC, OTE and SST with several options
-   available.
-4. **eval**: evaluates a trained model with a given test set.
-5. **cross**: it performs cross validation on a corpus.
+2. **aspect**: reads a NAF document containing *wf* and *term* elements and detects aspects.
+3. **pol**: reads a NAF document containing *wf* and *term* elements and tags polarity.
+2. **server**: starts a TCP service loading the model and required resources.
+2. **client**: sends a NAF document to a running TCP server.
 
-Each of these functionalities are accessible by adding (server|client|tag|ote|train|eval|cross) as a
-subcommand to ixa-pipe-nerc-${version}-exec.jar. Please read below and check the -help
+Each of these functionalities are accessible by adding (ote|aspect|pol|server|client) as a
+subcommand to ixa-pipe-opinion-${version}-exec.jar. Please read below and check the -help
 parameter:
 
 ````shell
-java -jar target/ixa-pipe-nerc-${version}-exec.jar (tag|ote|train|eval|cross) -help
-````
-**Every option for training is documented in the trainParams.properties file distributed with
-ixa-pipe-nerc**. Please do read that file!!
-
-### Tagging
-
-If you are in hurry, just execute:
-
-````shell
-cat file.txt | ixa-pipe-tok | ixa-pipe-pos | java -jar $PATH/target/ixa-pipe-nerc-${version}-exec.jar tag -m model.bin
-````
-
-If you want to know more, please follow reading.
-
-ixa-pipe-nerc reads NAF documents (with *wf* and *term* elements) via standard input and outputs NAF
-through standard output. The NAF format specification is here:
-
-(http://wordpress.let.vupr.nl/naf/)
-
-You can get the necessary input for ixa-pipe-nerc by piping
-[ixa-pipe-tok](https://github.com/ixa-ehu/ixa-pipe-tok) and
-[ixa-pipe-pos](https://github.com/ixa-ehu/ixa-pipe-pos) as shown in the
-example.
-
-There are several options to tag with ixa-pipe-nerc:
-
-+ **model**: pass the model as a parameter.
-+ **language**: pass the language as a parameter.
-+ **outputFormat**: Output annotation in a format: available CoNLL03, CoNLL02,
-  OpenNLP native format and NAF. It defaults to NAF.
-+ **lexer**: switches on the rule-based DFA for NERC tagging. Currently we only provide
-  one option **numeric**, which identifies "numeric entities" such as DATE,
-  TIME, MONEY and PERCENT for all the languages currently in ixa-pipe-nerc.
-+ **dictTag**: directly tag named entities contained in a gazetteer.
-  + **tag**: with tag option, only dictionary entities are annotated.
-  + **post**: with post option, the output of the statistical model is
-    post-processed.
-+ **dictPath**: the directory containing the gazetteers for the --dictTag
-  option.
-
-**Example**:
-
-````shell
-cat file.txt | ixa-pipe-tok | ixa-pipe-pos | java -jar $PATH/target/ixa-pipe-nerc-${version}-exec.jar tag -m nerc-models-$version/en/en-local-conll03.bin
+java -jar target/ixa-pipe-opinion-${version}-exec.jar (ote|aspect|pol|server|client) -help
 ````
 ### OTE
 
