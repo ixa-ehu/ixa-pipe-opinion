@@ -513,7 +513,7 @@ private Subparser polarityParser;
          .required(true)
          .choices("absa", "ote", "aspect", "polarity")
          .help("Choose the task.\n");
-    serverParser.addArgument("-t","--tagger")
+    serverParser.addArgument("-c", "--tagger")
     .required(true)
     .choices("doc","seq")
     .help("Choose type the of aspect classifier: using a sequence labeler model or a document classifier model.\n");
