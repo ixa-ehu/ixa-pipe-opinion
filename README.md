@@ -1,6 +1,9 @@
 
 ixa-pipe-opinion
-=============
+================
+
+[![Build Status](https://travis-ci.org/ixa-ehu/ixa-pipe-opinion.svg?branch=master)](https://travis-ci.org/ixa-ehu/ixa-pipe-opinion)
+[![GitHub license](https://img.shields.io/badge/license-Apache%202-blue.svg)](https://raw.githubusercontent.com/apache/opennlp/master/LICENSE)
 
 ixa-pipe-opinion is a multilingual Aspect Based Opinion tagger consisting of Opinion Target Extraction (OTE), Aspect detection and polarity tagging.
 
