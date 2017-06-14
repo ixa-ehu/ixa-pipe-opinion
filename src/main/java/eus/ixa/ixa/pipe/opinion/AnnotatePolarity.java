@@ -41,7 +41,7 @@ import ixa.kaflib.WF;
  * @version 2017-06-09
  * 
  */
-public class AnnotatePolarity {
+public class AnnotatePolarity implements Annotate {
 
   /**
    * The Document classifier to extract the aspects.
@@ -71,7 +71,7 @@ public class AnnotatePolarity {
    * Extract aspects using a document classifier.
    * @param kaf the KAFDocument
    */
-  public final void annotatePolarity(final KAFDocument kaf) {
+  public final void annotate(final KAFDocument kaf) {
 
     List<List<WF>> sentences = kaf.getSentences();
     List<Term> terms = kaf.getTerms();
@@ -122,7 +122,7 @@ public class AnnotatePolarity {
    *          the naf document
    * @return the string containing the naf document
    */
-  public final String annotatePolarityToNAF(KAFDocument kaf) {
+  public final String annotateToNAF(KAFDocument kaf) {
     return kaf.toString();
   }
   

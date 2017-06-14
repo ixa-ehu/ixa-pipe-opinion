@@ -1,5 +1,5 @@
 /*
- *  Copyright 2015 Rodrigo Agerri
+ *  Copyright 2017 Rodrigo Agerri
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -16,14 +16,13 @@
 
 package eus.ixa.ixa.pipe.opinion;
 
-import ixa.kaflib.KAFDocument;
-
-import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
+import java.io.BufferedWriter;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
 import java.io.StringReader;
+import java.io.UnsupportedEncodingException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Properties;
@@ -32,15 +31,17 @@ import org.jdom2.JDOMException;
 
 import com.google.common.io.Files;
 
+import ixa.kaflib.KAFDocument;
+
 public class OpinionTaggerServer {
 
   /**
-   * Get dynamically the version of ixa-pipe-nerc by looking at the MANIFEST
+   * Get dynamically the version of ixa-pipe-opinion by looking at the MANIFEST
    * file.
    */
   private final String version = CLI.class.getPackage().getImplementationVersion();
   /**
-   * Get the git commit of the ixa-pipe-nerc compiled by looking at the MANIFEST
+   * Get the git commit of the ixa-pipe-opinion compiled by looking at the MANIFEST
    * file.
    */
   private final String commit = CLI.class.getPackage().getSpecificationVersion();
@@ -49,47 +50,78 @@ public class OpinionTaggerServer {
    */
   private String model = null;
   /**
-   * The annotation output format, one of NAF (default), CoNLL 2002, CoNLL 2003
-   * and OpenNLP.
+   * The annotation output format, one of NAF (default) or tabulated.
    */
   private String outputFormat = null;
   
   /**
-   * Construct an OTE server.
+   * Construct a server.
    * 
    * @param properties
    *          the properties
+   * @throws IOException 
    */
-  public OpinionTaggerServer(Properties properties) {
+  public OpinionTaggerServer(Properties properties) throws IOException {
 
     Integer port = Integer.parseInt(properties.getProperty("port"));
     model = properties.getProperty("model");
     outputFormat = properties.getProperty("outputFormat");
+    String task = properties.getProperty("task");
+    Annotate annotator = null;
+    
+    if (task.equalsIgnoreCase("ote")) {
+      annotator = new AnnotateTargets(properties);
+    } else if (task.equalsIgnoreCase("aspect")) {
+      String tagger = properties.getProperty("tagger");
+      if (tagger.equalsIgnoreCase("doc")) {
+        annotator = new DocAnnotateAspects(properties);
+      } else {
+        annotator = new SeqAnnotateAspects(properties);
+      }
+    } else if (task.equalsIgnoreCase("polarity")) {
+      annotator = new DocAnnotateAspects(properties);
+    }
+    String kafToString;
     ServerSocket socketServer = null;
+    Socket activeSocket;
+    BufferedReader inFromClient = null;
+    BufferedWriter outToClient = null;
 
     try {
-      AnnotateTargets annotator = new AnnotateTargets(properties);
       System.out.println("-> Trying to listen port... " + port);
       socketServer = new ServerSocket(port);
-
+      System.out.println("-> Connected and listening to port " + port);
       while (true) {
-        System.out.println("-> Connected and listening to port " + port);
-        try (Socket activeSocket = socketServer.accept();
-            DataInputStream inFromClient = new DataInputStream(
-                activeSocket.getInputStream());
-            DataOutputStream outToClient = new DataOutputStream(new BufferedOutputStream(
-                activeSocket.getOutputStream()));) {
-          System.out.println("-> Received a  connection from: " + activeSocket);
+        try {
+          activeSocket = socketServer.accept();
+          inFromClient = new BufferedReader(new InputStreamReader(activeSocket.getInputStream(), "UTF-8"));
+          outToClient = new BufferedWriter(new OutputStreamWriter(activeSocket.getOutputStream(), "UTF-8"));
           //get data from client
           String stringFromClient = getClientData(inFromClient);
           // annotate
-          String kafToString = getAnnotations(annotator, stringFromClient);
-          // send to server
-          sendDataToServer(outToClient, kafToString);
+          kafToString = getAnnotations(annotator, stringFromClient);
+        } catch (JDOMException e) {
+          kafToString = "\n-> ERROR: Badly formatted NAF document!!\n";
+          sendDataToClient(outToClient, kafToString);
+          continue;
+        } catch (UnsupportedEncodingException e) {
+          kafToString = "\n-> ERROR: UTF-8 not supported!!\n";
+          sendDataToClient(outToClient, kafToString);
+          continue;
+        } catch (IOException e) {
+          kafToString = "\n -> ERROR: Input data not correct!!\n";
+          sendDataToClient(outToClient, kafToString);
+          continue;
         }
-      }
-    } catch (IOException | JDOMException e) {
+        //send data to server after all exceptions and close the outToClient
+        sendDataToClient(outToClient, kafToString);
+        //close the resources
+        inFromClient.close();
+        activeSocket.close();
+      } //end of processing block
+    } catch (IOException e) {
       e.printStackTrace();
+      System.err.println("-> IOException due to failing to create the TCP socket or to wrongly provided model path.");
     } finally {
       System.out.println("closing tcp socket...");
       try {
@@ -105,17 +137,19 @@ public class OpinionTaggerServer {
    * @param inFromClient the client inputstream
    * @return the string from the client
    */
-  private String getClientData(DataInputStream inFromClient) {
-    //get data from client and build a string with it
+  private String getClientData(BufferedReader inFromClient) {
     StringBuilder stringFromClient = new StringBuilder();
     try {
-      boolean endOfClientFile = inFromClient.readBoolean();
-      String line = "";
-      while (!endOfClientFile) {
-        line = inFromClient.readUTF();
+      String line;
+      while ((line = inFromClient.readLine()) != null) {
+        if (line.matches("<ENDOFDOCUMENT>")) {
+          break;
+        }
         stringFromClient.append(line).append("\n");
-        endOfClientFile = inFromClient.readBoolean();
-    }
+        if (line.matches("</NAF>")) {
+          break;
+        }
+      }
     }catch (IOException e) {
       e.printStackTrace();
     }
@@ -128,10 +162,9 @@ public class OpinionTaggerServer {
    * @param kafToString the string to be processed
    * @throws IOException if io error
    */
-  private void sendDataToServer(DataOutputStream outToClient, String kafToString) throws IOException {
-    
-    byte[] kafByteArray = kafToString.getBytes("UTF-8");
-    outToClient.write(kafByteArray);
+  private void sendDataToClient(BufferedWriter outToClient, String kafToString) throws IOException {
+    outToClient.write(kafToString);
+    outToClient.close();
   }
   
   /**
@@ -147,28 +180,24 @@ public class OpinionTaggerServer {
    * @throws JDOMException
    *           if xml error
    */
-  private String getAnnotations(AnnotateTargets annotator, String stringFromClient)
+  private String getAnnotations(Annotate annotator, String stringFromClient)
       throws IOException, JDOMException {
     // get a breader from the string coming from the client
     BufferedReader clientReader = new BufferedReader(new StringReader(
         stringFromClient));
     KAFDocument kaf = KAFDocument.createFromStream(clientReader);
     KAFDocument.LinguisticProcessor newLp = kaf.addLinguisticProcessor(
-        "entities", "ixa-pipe-nerc-" + Files.getNameWithoutExtension(model),
+        "opinions", "ixa-pipe-opinion-" + Files.getNameWithoutExtension(model),
         version + "-" + commit);
     newLp.setBeginTimestamp();
-    annotator.annotateOTE(kaf);
+    annotator.annotate(kaf);
     newLp.setEndTimestamp();
     // get outputFormat
     String kafToString = null;
-    if (outputFormat.equalsIgnoreCase("conll03")) {
-      kafToString = annotator.annotateOTEsToKAF(kaf);
-    } else if (outputFormat.equalsIgnoreCase("conll02")) {
-      kafToString = annotator.annotateOTEsToKAF(kaf);
-    } else if (outputFormat.equalsIgnoreCase("opennlp")) {
-      kafToString = annotator.annotateOTEsToOpenNLP(kaf);
+    if (outputFormat.equalsIgnoreCase("tabulated")) {
+      kafToString = annotator.annotateToNAF(kaf);
     } else {
-      kafToString = annotator.annotateOTEsToKAF(kaf);
+      kafToString = annotator.annotateToNAF(kaf);
     }
     return kafToString;
   }

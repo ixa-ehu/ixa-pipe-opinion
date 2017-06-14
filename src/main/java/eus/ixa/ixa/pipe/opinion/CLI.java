@@ -219,13 +219,13 @@ private Subparser polarityParser;
         "opinions", "ixa-pipe-opinion-" + Files.getNameWithoutExtension(model), version + "-" + commit);
     newLp.setBeginTimestamp();
     AnnotateTargets oteExtractor = new AnnotateTargets(properties);
-    oteExtractor.annotateOTE(kaf);
+    oteExtractor.annotate(kaf);
     newLp.setEndTimestamp();
     String kafToString = null;
-    if (outputFormat.equalsIgnoreCase("opennlp")) {
-      kafToString = oteExtractor.annotateOTEsToOpenNLP(kaf);
+    if (outputFormat.equalsIgnoreCase("tabulated")) {
+      kafToString = oteExtractor.annotateToNAF(kaf);
     } else {
-      kafToString = oteExtractor.annotateOTEsToKAF(kaf);
+      kafToString = oteExtractor.annotateToNAF(kaf);
     }
     bwriter.write(kafToString);
     bwriter.close();
@@ -272,20 +272,20 @@ private Subparser polarityParser;
     Properties properties = setAspectProperties(tagger, model, lang, clearFeatures);
     KAFDocument.LinguisticProcessor newLp = kaf.addLinguisticProcessor(
         "opinions", "ixa-pipe-opinion-" + Files.getNameWithoutExtension(model), version + "-" + commit);
-    AnnotateAspects aspectExtractor = null;
+    Annotate aspectExtractor = null;
     if (tagger.equalsIgnoreCase("doc")) {
       aspectExtractor = new DocAnnotateAspects(properties);
     } else {
       aspectExtractor = new SeqAnnotateAspects(properties);
     }
     newLp.setBeginTimestamp();
-    aspectExtractor.annotateAspects(kaf);
+    aspectExtractor.annotate(kaf);
     newLp.setEndTimestamp();
     String kafToString = null;
     if (outputFormat.equalsIgnoreCase("tabulated")) {
-      kafToString = aspectExtractor.annotateAspectsToNAF(kaf);
+      kafToString = aspectExtractor.annotateToNAF(kaf);
     } else {
-      kafToString = aspectExtractor.annotateAspectsToNAF(kaf);
+      kafToString = aspectExtractor.annotateToNAF(kaf);
     }
     bwriter.write(kafToString);
     bwriter.close();
@@ -334,13 +334,13 @@ private Subparser polarityParser;
         "opinions", "ixa-pipe-opinion-" + Files.getNameWithoutExtension(model), version + "-" + commit);
     newLp.setBeginTimestamp();
     AnnotatePolarity polarityExtractor = new AnnotatePolarity(properties);
-    polarityExtractor.annotatePolarity(kaf);
+    polarityExtractor.annotate(kaf);
     newLp.setEndTimestamp();
     String kafToString = null;
     if (outputFormat.equalsIgnoreCase("tabulated")) {
       kafToString = polarityExtractor.annotatePolarityToTabulated(kaf);
     } else {
-      kafToString = polarityExtractor.annotatePolarityToNAF(kaf);
+      kafToString = polarityExtractor.annotateToNAF(kaf);
     }
     bwriter.write(kafToString);
     bwriter.close();
@@ -350,8 +350,9 @@ private Subparser polarityParser;
   
   /**
    * Set up the TCP socket for annotation.
+   * @throws IOException 
    */
-  public final void server() {
+  public final void server() throws IOException {
 
     // load parameters into a properties
     String port = parsedArguments.getString("port");
@@ -360,7 +361,7 @@ private Subparser polarityParser;
     String outputFormat = parsedArguments.getString("outputFormat");
     // language parameter
     String lang = parsedArguments.getString("language");
-    Properties serverproperties = setNameServerProperties(port, model, lang, clearFeatures, outputFormat);
+    Properties serverproperties = setAbsaServerProperties(port, model, lang, clearFeatures, outputFormat);
     new OpinionTaggerServer(serverproperties);
   }
   
@@ -440,7 +441,7 @@ private Subparser polarityParser;
         .help("Choose language; it defaults to the language value in incoming NAF file.\n");
     oteParser.addArgument("-o","--outputFormat")
         .required(false)
-        .choices("naf", "conll02")
+        .choices("naf", "tabulated")
         .setDefault(Flags.DEFAULT_OUTPUT_FORMAT)
         .help("Choose output format; it defaults to NAF.\n");
   }
@@ -509,9 +510,13 @@ private Subparser polarityParser;
   private void loadServerParameters() {
     
     serverParser.addArgument("-t","--task")
-         .required(false)
+         .required(true)
          .choices("absa", "ote", "aspect", "polarity")
          .help("Choose the task.\n");
+    serverParser.addArgument("-t","--tagger")
+    .required(true)
+    .choices("doc","seq")
+    .help("Choose type the of aspect classifier: using a sequence labeler model or a document classifier model.\n");
     serverParser.addArgument("-p", "--port")
         .required(true)
         .help("Port to be assigned to the server.\n");
@@ -530,7 +535,7 @@ private Subparser polarityParser;
         .help("Choose language.\n");
     serverParser.addArgument("-o","--outputFormat")
         .required(false)
-        .choices("conll02", "naf")
+        .choices("tabulated", "naf")
         .setDefault(Flags.DEFAULT_OUTPUT_FORMAT)
         .help("Choose output format; it defaults to NAF.\n");
   }
@@ -582,7 +587,7 @@ private Subparser polarityParser;
   }
   
   
-  private Properties setNameServerProperties(String port, String model, String language, String clearFeatures, String outputFormat) {
+  private Properties setAbsaServerProperties(String port, String model, String language, String clearFeatures, String outputFormat) {
     Properties serverProperties = new Properties();
     serverProperties.setProperty("port", port);
     serverProperties.setProperty("model", model);

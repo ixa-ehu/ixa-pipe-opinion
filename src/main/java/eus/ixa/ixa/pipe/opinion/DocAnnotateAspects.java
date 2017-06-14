@@ -35,7 +35,7 @@ import ixa.kaflib.WF;
  * @version 2017-06-09
  * 
  */
-public class DocAnnotateAspects implements AnnotateAspects {
+public class DocAnnotateAspects implements Annotate {
 
   /**
    * The Document classifier to extract the aspects.
@@ -57,7 +57,7 @@ public class DocAnnotateAspects implements AnnotateAspects {
    * Extract aspects using a document classifier.
    * @param kaf the KAFDocument
    */
-  public final void annotateAspects(final KAFDocument kaf) {
+  public final void annotate(final KAFDocument kaf) {
 
     List<List<WF>> sentences = kaf.getSentences();
     for (List<WF> sentence : sentences) {
@@ -93,7 +93,7 @@ public class DocAnnotateAspects implements AnnotateAspects {
    *          the naf document
    * @return the string containing the naf document
    */
-  public final String annotateAspectsToNAF(KAFDocument kaf) {
+  public final String annotateToNAF(KAFDocument kaf) {
     return kaf.toString();
   }
   
