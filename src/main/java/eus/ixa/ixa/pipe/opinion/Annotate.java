@@ -12,8 +12,8 @@ public interface Annotate {
   
   /**
    * Serializes the NAF containing opinion layer with aspects.
-   * @param kaf
-   * @return
+   * @param kaf the NAF document
+   * @return the NAF document in a string
    */
   public String annotateToNAF(KAFDocument kaf);
 

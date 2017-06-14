@@ -59,7 +59,7 @@ public class OpinionTaggerServer {
    * 
    * @param properties
    *          the properties
-   * @throws IOException 
+   * @throws IOException if io problems
    */
   public OpinionTaggerServer(Properties properties) throws IOException {
 

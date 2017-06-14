@@ -350,7 +350,7 @@ private Subparser polarityParser;
   
   /**
    * Set up the TCP socket for annotation.
-   * @throws IOException 
+   * @throws IOException if io problems
    */
   public final void server() throws IOException {
 
