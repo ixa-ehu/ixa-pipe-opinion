@@ -21,10 +21,10 @@ for easy access to its API.
 
 ## TABLE OF CONTENTS
 
-1. [Overview of ixa-pipe-opinion](#overview)
+1. [Overview](#overview)
   + [Available features](#features)
   + [OTE distributed models](#ote-models)
-2. [Usage of ixa-pipe-nerc](#cli-usage)
+2. [Usage](#usage)
   + [Opinion Target Extraction (OTE)](#ote)
   + [Aspect detection](#aspects)
   + [Polarity tagging](#polarity)
@@ -61,7 +61,7 @@ properties files, please do check this document.
     + Trained on SemEval 2015 restaurants dataset (ote subtask winner).
     + Trained on SemEval 2016 restaurants dataset.
 
-## CLI-USAGE
+## Usage
 
 ixa-pipe-opinion provides a runable jar with the following command-line basic functionalities:
 
