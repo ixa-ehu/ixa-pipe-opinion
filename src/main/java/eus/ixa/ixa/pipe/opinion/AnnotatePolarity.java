@@ -68,7 +68,7 @@ public class AnnotatePolarity implements Annotate {
   }
   
   /**
-   * Extract aspects using a document classifier.
+   * Annotate polarity using a document classifier.
    * @param kaf the KAFDocument
    */
   public final void annotate(final KAFDocument kaf) {
