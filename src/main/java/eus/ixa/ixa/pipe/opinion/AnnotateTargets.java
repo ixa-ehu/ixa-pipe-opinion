@@ -57,7 +57,7 @@ public class AnnotateTargets implements Annotate {
 
     this.clearFeatures = properties.getProperty("clearFeatures");
     nameFactory = new SequenceLabelFactory();
-    oteExtractor = new StatisticalSequenceLabeler(properties, nameFactory);
+    oteExtractor = new StatisticalSequenceLabeler(properties);
   }
   
   /**

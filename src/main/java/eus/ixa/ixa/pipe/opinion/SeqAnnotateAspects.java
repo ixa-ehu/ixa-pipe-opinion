@@ -57,7 +57,7 @@ public class SeqAnnotateAspects implements Annotate {
 
     this.clearFeatures = properties.getProperty("clearFeatures");
     nameFactory = new SequenceLabelFactory();
-    seqExtractor = new StatisticalSequenceLabeler(properties, nameFactory);
+    seqExtractor = new StatisticalSequenceLabeler(properties);
   }
   
   /**
