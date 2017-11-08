@@ -19,7 +19,7 @@ and install this repository instead of using the releases provided in
 [http://ixa2.si.ehu.es/ixa-pipes], please scroll down to the end of the document for
 the [installation instructions](#installation).
 
-**NOTICE!!**: ixa-pipe-opinion is now in [Maven Central](http://search.maven.org/)
+**NOTICE!!**: ixa-pipe-opinion will be soon in [Maven Central](http://search.maven.org/)
 for easy access to its API.
 
 ## TABLE OF CONTENTS
@@ -59,10 +59,16 @@ properties files, please do check this document.
 
 ### OTE-Models
 
-+ **English Models**:
-    + Trained on SemEval 2014 restaurants dataset.
-    + Trained on SemEval 2015 restaurants dataset (ote subtask winner).
-    + Trained on SemEval 2016 restaurants dataset.
+We distribute Opinion Target Extraction models for the restaurant domain trained with the SemEval ABSA 2014-2016 datasets for six languages: English, Spanish, French, Dutch, Turkish and Russian. The system was the task winner of the ote substask in the ABSA 2015 edition. We also obtain state-of-the-art results for the rest of evaluation settings and languages.
+
++ [English 2014-2016 ABSA OTE Models](http://ixa2.si.ehu.es/ixa-pipes/models/en-ote-models-1.0.0.tar.gz) [119MB]
++ [Spanish ABSA OTE Models](http://ixa2.si.ehu.es/ixa-pipes/models/es-ote-models-1.0.0.tar.gz) [29MB]
++ [French ABSA OTE Models](http://ixa2.si.ehu.es/ixa-pipes/models/fr-ote-models-1.0.0.tar.gz) [34MB]
++ [Dutch ABSA OTE Models](http://ixa2.si.ehu.es/ixa-pipes/models/nl-ote-models-1.0.0.tar.gz) [27MB]
++ [Turkish ABSA OTE Models](http://ixa2.si.ehu.es/ixa-pipes/models/tr-ote-models-1.0.0.tar.gz) [12MB]
++ [Russian ABSA OTE Models](http://ixa2.si.ehu.es/ixa-pipes/models/en-ote-models-1.0.0.tar.gz) [61MB]
+
+We also distribute a set of scripts to [reproduce the results using the ABSA test set and evaluation scripts](http://ixa2.si.ehu.es/ixa-pipes/models/absa-ote-evaluation-scripts.tar.gz).
 
 ## Usage
 
