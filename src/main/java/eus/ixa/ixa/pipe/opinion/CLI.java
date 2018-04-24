@@ -81,6 +81,10 @@ public class CLI {
   private Subparsers subParsers = argParser.addSubparsers().help(
       "sub-command help");
   /**
+   * Parser to manage the Aspect Based Sentiment Analysis sub-command.
+   */
+  private Subparser absaParser;
+  /**
    * Parser to manage the Opinion Target Extraction sub-command.
    */
   private Subparser oteParser;
@@ -101,6 +105,7 @@ private Subparser polarityParser;
    */
   private Subparser clientParser;
   
+  private static final String ABSA_PARSER_NAME = "absa";
   private static final String OTE_PARSER_NAME = "ote";
   private static final String ASPECT_PARSER_NAME = "aspect";
   private static final String POLARITY_PARSER_NAME = "pol";
@@ -112,6 +117,8 @@ private Subparser polarityParser;
    * line parameters.
    */
   public CLI() {
+    absaParser = subParsers.addParser(ABSA_PARSER_NAME).help("ABSA Tagging CLI");
+    loadAbsaParameters();
     oteParser = subParsers.addParser(OTE_PARSER_NAME).help("OTE Tagging CLI");
     loadOteParameters();
     aspectParser = subParsers.addParser(ASPECT_PARSER_NAME).help("Aspect Tagging CLI");
@@ -155,6 +162,9 @@ private Subparser polarityParser;
       parsedArguments = argParser.parseArgs(args);
       System.err.println("CLI options: " + parsedArguments);
       switch(args[0]) {
+      case ABSA_PARSER_NAME:
+        absa(System.in, System.out);
+        break;
       case OTE_PARSER_NAME:
         extractOte(System.in, System.out);
         break;
@@ -177,7 +187,65 @@ private Subparser polarityParser;
           + ".jar (absa|aspect|ote|pol|server|client) -help for details");
       System.exit(1);
     }
-  }  
+  }
+  
+  /**
+   * Main method for Aspect Based Sentiment Analysis (ABSA).
+   * 
+   * @param inputStream
+   *          the input stream containing the content to tag
+   * @param outputStream
+   *          the output stream providing the opinion targets
+   * @throws IOException
+   *           exception if problems in input or output streams
+   * @throws JDOMException if xml formatting problems
+   */
+  public final void absa(final InputStream inputStream,
+      final OutputStream outputStream) throws IOException, JDOMException {
+
+    BufferedReader breader = new BufferedReader(new InputStreamReader(
+        inputStream, "UTF-8"));
+    BufferedWriter bwriter = new BufferedWriter(new OutputStreamWriter(
+        outputStream, "UTF-8"));
+    //read KAF document from inputstream
+    KAFDocument kaf = KAFDocument.createFromStream(breader);
+    // load parameters into a properties
+    String targetModel = parsedArguments.getString("targetModel");
+    String polarityModel = parsedArguments.getString("polarityModel");
+    String outputFormat = parsedArguments.getString("outputFormat");
+    String clearFeatures = parsedArguments.getString("clearFeatures");
+    String dictionary = parsedArguments.getString("dictionary");
+    //language parameter
+    String lang = null;
+    if (parsedArguments.getString("language") != null) {
+      lang = parsedArguments.getString("language");
+      if (!kaf.getLang().equalsIgnoreCase(lang)) {
+        System.err
+            .println("Language parameter in NAF and CLI do not match!!");
+        System.exit(1);
+      }
+    } else {
+      lang = kaf.getLang();
+    }
+    Properties oteProperties = setOteProperties(targetModel, lang, clearFeatures);
+    Properties polProperties = setPolarityProperties(polarityModel, dictionary, lang, clearFeatures);
+    KAFDocument.LinguisticProcessor newLp = kaf.addLinguisticProcessor(
+        "opinions", "ixa-pipe-opinion-" + Files.getNameWithoutExtension(targetModel), version + "-" + commit);
+    newLp.setBeginTimestamp();
+    AnnotateAbsa absaAnnotator = new AnnotateAbsa(oteProperties, polProperties);
+    absaAnnotator.annotate(kaf);
+    newLp.setEndTimestamp();
+    String kafToString = null;
+    if (outputFormat.equalsIgnoreCase("tabulated")) {
+      kafToString = absaAnnotator.annotateToNAF(kaf);
+    } else {
+      kafToString = absaAnnotator.annotateToNAF(kaf);
+    }
+    bwriter.write(kafToString);
+    bwriter.close();
+    breader.close();
+  }
+
   /**
    * Main method to do Opinion Target Extraction (OTE).
    * 
@@ -419,7 +487,37 @@ private Subparser polarityParser;
     }
   }
 
- 
+  /**
+   * Create the available parameters for Opinion Target Extraction.
+   */
+  private void loadAbsaParameters() {
+    
+    absaParser.addArgument("-t", "--targetModel")
+        .required(true)
+        .help("Pass the Opinion Target model.\n");
+    absaParser.addArgument("-p", "--polarityModel")
+    .required(true)
+    .help("Pass the polarity classification model.\n");
+    absaParser.addArgument("--clearFeatures")
+        .required(false)
+        .choices("yes", "no", "docstart")
+        .setDefault(Flags.DEFAULT_FEATURE_FLAG)
+        .help("Reset the adaptive features every sentence; defaults to 'no'; if -DOCSTART- marks" +
+                " are present, choose 'docstart'.\n");
+    absaParser.addArgument("-l","--language")
+        .required(false)
+        .choices("en", "es", "fr", "nl", "ru", "tr")
+        .help("Choose language; it defaults to the language value in incoming NAF file.\n");
+    absaParser.addArgument("-o","--outputFormat")
+        .required(false)
+        .choices("naf", "tabulated")
+        .setDefault(Flags.DEFAULT_OUTPUT_FORMAT)
+        .help("Choose output format; it defaults to NAF.\n");
+    absaParser.addArgument("-d","--dictionary")
+    .required(false)
+    .setDefault(Flags.DEFAULT_DICT_OPTION)
+    .help("Provide polarity lexicon to tag polarity at token/lemma level.\n");
+  }
   
   /**
    * Create the available parameters for Opinion Target Extraction.
@@ -549,16 +647,8 @@ private Subparser polarityParser;
         .required(false)
         .setDefault(Flags.DEFAULT_HOSTNAME)
         .help("Hostname or IP where the TCP server is running.\n");
-  }  
-  /**
-   * Set a Properties object with the CLI parameters for Opinion Target Extraction.
-   * @param model the model parameter
-   * @param language language parameter
-   * @param lexer rule based parameter
-   * @param dictTag directly tag from a dictionary
-   * @param dictPath directory to the dictionaries
-   * @return the properties object
-   */
+  }
+
   private Properties setOteProperties(String model, String language, String clearFeatures) {
     Properties oteProperties = new Properties();
     oteProperties.setProperty("model", model);
@@ -578,12 +668,12 @@ private Subparser polarityParser;
   }
   
   private Properties setPolarityProperties(String model, String dictionary, String language, String clearFeatures) {
-    Properties aspectProperties = new Properties();
-    aspectProperties.setProperty("model", model);
-    aspectProperties.setProperty("dictionary", dictionary);
-    aspectProperties.setProperty("language", language);
-    aspectProperties.setProperty("clearFeatures", clearFeatures);
-    return aspectProperties;
+    Properties polarityProperties = new Properties();
+    polarityProperties.setProperty("model", model);
+    polarityProperties.setProperty("dictionary", dictionary);
+    polarityProperties.setProperty("language", language);
+    polarityProperties.setProperty("clearFeatures", clearFeatures);
+    return polarityProperties;
   }
   
   

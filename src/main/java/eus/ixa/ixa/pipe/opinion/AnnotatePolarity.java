@@ -44,7 +44,7 @@ import ixa.kaflib.WF;
 public class AnnotatePolarity implements Annotate {
 
   /**
-   * The Document classifier to extract the aspects.
+   * The Document classifier to annotate polarity.
    */
   private StatisticalDocumentClassifier polTagger;
   private DictionaryPolarityTagger dictTagger;
