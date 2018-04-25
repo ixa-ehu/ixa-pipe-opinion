@@ -61,10 +61,10 @@ properties files, please do check this document.
 
 We distribute Opinion Target Extraction models for the restaurant domain trained with the SemEval ABSA 2014-2016 datasets for four languages: English, Spanish, French and Dutch. We obtain state-of-the-art results for every evaluation setting and language.
 
-+ [English 2016 ABSA Models](http://ixa2.si.ehu.es/ixa-pipes/models/en-absa-models-1.0.0.tar.gz) [119MB]
-+ [Spanish ABSA Models](http://ixa2.si.ehu.es/ixa-pipes/models/es-absa-models-1.0.0.tar.gz) [29MB]
-+ [French ABSA Models](http://ixa2.si.ehu.es/ixa-pipes/models/fr-absa-models-1.0.0.tar.gz) [34MB]
-+ [Dutch ABSA Models](http://ixa2.si.ehu.es/ixa-pipes/models/nl-absa-models-1.0.0.tar.gz) [27MB]
++ [English 2016 ABSA Models](http://ixa2.si.ehu.es/ixa-pipes/models/en-absa-models-1.0.0.tar.gz) [21MB]
++ [Spanish ABSA Models](http://ixa2.si.ehu.es/ixa-pipes/models/es-absa-models-1.0.0.tar.gz) [14MB]
++ [French ABSA Models](http://ixa2.si.ehu.es/ixa-pipes/models/fr-absa-models-1.0.0.tar.gz) [12MB]
++ [Dutch ABSA Models](http://ixa2.si.ehu.es/ixa-pipes/models/nl-absa-models-1.0.0.tar.gz) [5MB]
 
 ### OTE-Models
 
