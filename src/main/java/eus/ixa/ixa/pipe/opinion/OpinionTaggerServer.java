@@ -25,6 +25,7 @@ import java.io.StringReader;
 import java.io.UnsupportedEncodingException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.nio.charset.StandardCharsets;
 import java.util.Properties;
 
 import org.jdom2.JDOMException;
@@ -46,59 +47,53 @@ public class OpinionTaggerServer {
    */
   private final String commit = CLI.class.getPackage().getSpecificationVersion();
   /**
-   * The model.
+   * The aspect and target model.
    */
-  private String model = null;
+  private String targetModel;
+  /**
+   * The polarity classification model.
+   */
+  private String polarityModel;
   /**
    * The annotation output format, one of NAF (default) or tabulated.
    */
-  private String outputFormat = null;
+  //private String outputFormat;
   
   /**
    * Construct a server.
-   * 
-   * @param properties
-   *          the properties
+   * @param port the port number
+   * @param oteProperties the properties of the target and aspect labeler
+   * @param polProperties the polarity classifier properties
    * @throws IOException if io problems
    */
-  public OpinionTaggerServer(Properties properties) throws IOException {
+  public OpinionTaggerServer(String port, Properties oteProperties, Properties polProperties) throws IOException {
 
-    Integer port = Integer.parseInt(properties.getProperty("port"));
-    model = properties.getProperty("model");
-    outputFormat = properties.getProperty("outputFormat");
-    String task = properties.getProperty("task");
-    Annotate annotator = null;
-    
-    if (task.equalsIgnoreCase("ote")) {
-      annotator = new AnnotateTargets(properties);
-    } else if (task.equalsIgnoreCase("aspect")) {
-      String tagger = properties.getProperty("tagger");
-      if (tagger.equalsIgnoreCase("doc")) {
-        annotator = new DocAnnotateAspects(properties);
-      } else {
-        annotator = new SeqAnnotateAspects(properties);
-      }
-    } else if (task.equalsIgnoreCase("polarity")) {
-      annotator = new DocAnnotateAspects(properties);
-    }
+    int portNumber = Integer.parseInt(port);
+    targetModel = oteProperties.getProperty("targetModel");
+    polarityModel = polProperties.getProperty("polarityModel");
+    //outputFormat = oteProperties.getProperty("outputFormat");
+    Annotate annotator = new AnnotateAbsa(oteProperties, polProperties);
     String kafToString;
     ServerSocket socketServer = null;
     Socket activeSocket;
-    BufferedReader inFromClient = null;
+    BufferedReader inFromClient;
     BufferedWriter outToClient = null;
 
     try {
       System.out.println("-> Trying to listen port... " + port);
-      socketServer = new ServerSocket(port);
+      socketServer = new ServerSocket(portNumber);
       System.out.println("-> Connected and listening to port " + port);
       while (true) {
         try {
           activeSocket = socketServer.accept();
-          inFromClient = new BufferedReader(new InputStreamReader(activeSocket.getInputStream(), "UTF-8"));
-          outToClient = new BufferedWriter(new OutputStreamWriter(activeSocket.getOutputStream(), "UTF-8"));
+          inFromClient = new BufferedReader(new InputStreamReader(activeSocket.getInputStream(),
+              StandardCharsets.UTF_8));
+          outToClient = new BufferedWriter(new OutputStreamWriter(activeSocket.getOutputStream(),
+              StandardCharsets.UTF_8));
           //get data from client
           String stringFromClient = getClientData(inFromClient);
           // annotate
+          assert annotator != null;
           kafToString = getAnnotations(annotator, stringFromClient);
         } catch (JDOMException e) {
           kafToString = "\n-> ERROR: Badly formatted NAF document!!\n";
@@ -106,10 +101,12 @@ public class OpinionTaggerServer {
           continue;
         } catch (UnsupportedEncodingException e) {
           kafToString = "\n-> ERROR: UTF-8 not supported!!\n";
+          assert outToClient != null;
           sendDataToClient(outToClient, kafToString);
           continue;
         } catch (IOException e) {
           kafToString = "\n -> ERROR: Input data not correct!!\n";
+          assert outToClient != null;
           sendDataToClient(outToClient, kafToString);
           continue;
         }
@@ -125,6 +122,7 @@ public class OpinionTaggerServer {
     } finally {
       System.out.println("closing tcp socket...");
       try {
+        assert socketServer != null;
         socketServer.close();
       } catch (IOException e) {
         e.printStackTrace();
@@ -187,18 +185,19 @@ public class OpinionTaggerServer {
         stringFromClient));
     KAFDocument kaf = KAFDocument.createFromStream(clientReader);
     KAFDocument.LinguisticProcessor newLp = kaf.addLinguisticProcessor(
-        "opinions", "ixa-pipe-opinion-" + Files.getNameWithoutExtension(model),
+        "opinions", "ixa-pipe-opinion-" + "jar",
         version + "-" + commit);
     newLp.setBeginTimestamp();
     annotator.annotate(kaf);
     newLp.setEndTimestamp();
     // get outputFormat
-    String kafToString = null;
-    if (outputFormat.equalsIgnoreCase("tabulated")) {
+    String kafToString = annotator.annotateToNAF(kaf);
+    /*if (outputFormat.equalsIgnoreCase("tabulated")) {
       kafToString = annotator.annotateToNAF(kaf);
     } else {
       kafToString = annotator.annotateToNAF(kaf);
     }
+     */
     return kafToString;
   }
 

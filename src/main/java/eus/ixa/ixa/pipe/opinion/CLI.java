@@ -28,6 +28,7 @@ import java.io.OutputStreamWriter;
 import java.io.UnsupportedEncodingException;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.nio.charset.StandardCharsets;
 import java.util.Properties;
 
 import net.sourceforge.argparse4j.ArgumentParsers;
@@ -204,9 +205,9 @@ private Subparser polarityParser;
       final OutputStream outputStream) throws IOException, JDOMException {
 
     BufferedReader breader = new BufferedReader(new InputStreamReader(
-        inputStream, "UTF-8"));
+        inputStream, StandardCharsets.UTF_8));
     BufferedWriter bwriter = new BufferedWriter(new OutputStreamWriter(
-        outputStream, "UTF-8"));
+        outputStream, StandardCharsets.UTF_8));
     //read KAF document from inputstream
     KAFDocument kaf = KAFDocument.createFromStream(breader);
     // load parameters into a properties
@@ -216,7 +217,7 @@ private Subparser polarityParser;
     String clearFeatures = parsedArguments.getString("clearFeatures");
     String dictionary = parsedArguments.getString("dictionary");
     //language parameter
-    String lang = null;
+    String lang;
     if (parsedArguments.getString("language") != null) {
       lang = parsedArguments.getString("language");
       if (!kaf.getLang().equalsIgnoreCase(lang)) {
@@ -261,9 +262,9 @@ private Subparser polarityParser;
       final OutputStream outputStream) throws IOException, JDOMException {
 
     BufferedReader breader = new BufferedReader(new InputStreamReader(
-        inputStream, "UTF-8"));
+        inputStream, StandardCharsets.UTF_8));
     BufferedWriter bwriter = new BufferedWriter(new OutputStreamWriter(
-        outputStream, "UTF-8"));
+        outputStream, StandardCharsets.UTF_8));
     // read KAF document from inputstream
     KAFDocument kaf = KAFDocument.createFromStream(breader);
     // load parameters into a properties
@@ -271,7 +272,7 @@ private Subparser polarityParser;
     String outputFormat = parsedArguments.getString("outputFormat");
     String clearFeatures = parsedArguments.getString("clearFeatures");
     // language parameter
-    String lang = null;
+    String lang;
     if (parsedArguments.getString("language") != null) {
       lang = parsedArguments.getString("language");
       if (!kaf.getLang().equalsIgnoreCase(lang)) {
@@ -315,9 +316,9 @@ private Subparser polarityParser;
       final OutputStream outputStream) throws IOException, JDOMException {
 
     BufferedReader breader = new BufferedReader(new InputStreamReader(
-        inputStream, "UTF-8"));
+        inputStream, StandardCharsets.UTF_8));
     BufferedWriter bwriter = new BufferedWriter(new OutputStreamWriter(
-        outputStream, "UTF-8"));
+        outputStream, StandardCharsets.UTF_8));
     // read KAF document from inputstream
     KAFDocument kaf = KAFDocument.createFromStream(breader);
     // load parameters into a properties
@@ -326,7 +327,7 @@ private Subparser polarityParser;
     String outputFormat = parsedArguments.getString("outputFormat");
     String clearFeatures = parsedArguments.getString("clearFeatures");
     // language parameter
-    String lang = null;
+    String lang;
     if (parsedArguments.getString("language") != null) {
       lang = parsedArguments.getString("language");
       if (!kaf.getLang().equalsIgnoreCase(lang)) {
@@ -340,7 +341,7 @@ private Subparser polarityParser;
     Properties properties = setAspectProperties(tagger, model, lang, clearFeatures);
     KAFDocument.LinguisticProcessor newLp = kaf.addLinguisticProcessor(
         "opinions", "ixa-pipe-opinion-" + Files.getNameWithoutExtension(model), version + "-" + commit);
-    Annotate aspectExtractor = null;
+    Annotate aspectExtractor;
     if (tagger.equalsIgnoreCase("doc")) {
       aspectExtractor = new DocAnnotateAspects(properties);
     } else {
@@ -349,7 +350,7 @@ private Subparser polarityParser;
     newLp.setBeginTimestamp();
     aspectExtractor.annotate(kaf);
     newLp.setEndTimestamp();
-    String kafToString = null;
+    String kafToString;
     if (outputFormat.equalsIgnoreCase("tabulated")) {
       kafToString = aspectExtractor.annotateToNAF(kaf);
     } else {
@@ -375,9 +376,9 @@ private Subparser polarityParser;
       final OutputStream outputStream) throws IOException, JDOMException {
 
     BufferedReader breader = new BufferedReader(new InputStreamReader(
-        inputStream, "UTF-8"));
+        inputStream, StandardCharsets.UTF_8));
     BufferedWriter bwriter = new BufferedWriter(new OutputStreamWriter(
-        outputStream, "UTF-8"));
+        outputStream, StandardCharsets.UTF_8));
     // read KAF document from inputstream
     KAFDocument kaf = KAFDocument.createFromStream(breader);
     // load parameters into a properties
@@ -386,7 +387,7 @@ private Subparser polarityParser;
     String outputFormat = parsedArguments.getString("outputFormat");
     String clearFeatures = parsedArguments.getString("clearFeatures");
     // language parameter
-    String lang = null;
+    String lang;
     if (parsedArguments.getString("language") != null) {
       lang = parsedArguments.getString("language");
       if (!kaf.getLang().equalsIgnoreCase(lang)) {
@@ -424,13 +425,16 @@ private Subparser polarityParser;
 
     // load parameters into a properties
     String port = parsedArguments.getString("port");
-    String model = parsedArguments.getString("model");
+    String oteModel = parsedArguments.getString("targetModel");
+    String polModel = parsedArguments.getString("polarityModel");
     String clearFeatures = parsedArguments.getString("clearFeatures");
     String outputFormat = parsedArguments.getString("outputFormat");
+    String dictionary = parsedArguments.getString("dictionary");
     // language parameter
     String lang = parsedArguments.getString("language");
-    Properties serverproperties = setAbsaServerProperties(port, model, lang, clearFeatures, outputFormat);
-    new OpinionTaggerServer(serverproperties);
+    Properties oteProperties = setOteProperties(oteModel, lang, clearFeatures);
+    Properties polProperties = setPolarityProperties(polModel, dictionary, lang, clearFeatures);
+    new OpinionTaggerServer(port, oteProperties, polProperties);
   }
   
   /**
@@ -447,14 +451,14 @@ private Subparser polarityParser;
     String host = parsedArguments.getString("host");
     String port = parsedArguments.getString("port");
     try (Socket socketClient = new Socket(host, Integer.parseInt(port));
-        BufferedReader inFromUser = new BufferedReader(new InputStreamReader(
-            System.in, "UTF-8"));
-        BufferedWriter outToUser = new BufferedWriter(new OutputStreamWriter(
-            System.out, "UTF-8"));
-        BufferedWriter outToServer = new BufferedWriter(new OutputStreamWriter(
-            socketClient.getOutputStream(), "UTF-8"));
-        BufferedReader inFromServer = new BufferedReader(new InputStreamReader(
-            socketClient.getInputStream(), "UTF-8"));) {
+         BufferedReader inFromUser = new BufferedReader(new InputStreamReader(
+            System.in, StandardCharsets.UTF_8));
+         BufferedWriter outToUser = new BufferedWriter(new OutputStreamWriter(
+            System.out, StandardCharsets.UTF_8));
+         BufferedWriter outToServer = new BufferedWriter(new OutputStreamWriter(
+            socketClient.getOutputStream(), StandardCharsets.UTF_8));
+         BufferedReader inFromServer = new BufferedReader(new InputStreamReader(
+            socketClient.getInputStream(), StandardCharsets.UTF_8))) {
 
       // send data to server socket
       StringBuilder inText = new StringBuilder();
@@ -606,21 +610,16 @@ private Subparser polarityParser;
    * Create the available parameters for ABSA analysis.
    */
   private void loadServerParameters() {
-    
-    serverParser.addArgument("-t","--task")
-         .required(true)
-         .choices("absa", "ote", "aspect", "polarity")
-         .help("Choose the task.\n");
-    serverParser.addArgument("-c", "--tagger")
-    .required(true)
-    .choices("doc","seq")
-    .help("Choose type the of aspect classifier: using a sequence labeler model or a document classifier model.\n");
-    serverParser.addArgument("-p", "--port")
+
+    serverParser.addArgument("--port")
         .required(true)
         .help("Port to be assigned to the server.\n");
-    serverParser.addArgument("-m", "--model")
+    serverParser.addArgument("-t", "--targetModel")
         .required(true)
-        .help("Pass the model to do the tagging as a parameter.\n");
+        .help("Pass the Opinion Target model.\n");
+    serverParser.addArgument("-p", "--polarityModel")
+        .required(true)
+        .help("Pass the polarity classification model.\n");
     serverParser.addArgument("--clearFeatures")
         .required(false)
         .choices("yes", "no", "docstart")
@@ -636,6 +635,10 @@ private Subparser polarityParser;
         .choices("tabulated", "naf")
         .setDefault(Flags.DEFAULT_OUTPUT_FORMAT)
         .help("Choose output format; it defaults to NAF.\n");
+    serverParser.addArgument("-d","--dictionary")
+        .required(false)
+        .setDefault(Flags.DEFAULT_DICT_OPTION)
+        .help("Provide polarity lexicon to tag polarity at token/lemma level.\n");
   }
   
   private void loadClientParameters() {
@@ -674,17 +677,6 @@ private Subparser polarityParser;
     polarityProperties.setProperty("language", language);
     polarityProperties.setProperty("clearFeatures", clearFeatures);
     return polarityProperties;
-  }
-  
-  
-  private Properties setAbsaServerProperties(String port, String model, String language, String clearFeatures, String outputFormat) {
-    Properties serverProperties = new Properties();
-    serverProperties.setProperty("port", port);
-    serverProperties.setProperty("model", model);
-    serverProperties.setProperty("language", language);
-    serverProperties.setProperty("clearFeatures", clearFeatures);
-    serverProperties.setProperty("outputFormat", outputFormat);
-    return serverProperties;
   }
 
 }
